@@ -112,6 +112,30 @@ export default function ImportScreen() {
               <ThemedText>• Comments: {result.commentsCreated}</ThemedText>
             </View>
 
+            {result.fieldCoverage && (
+              <View style={styles.statsCard}>
+                <ThemedText type="defaultSemiBold">Field Fidelity:</ThemedText>
+                <ThemedText type="small" style={{ color: 'green' }}>✓ {result.fieldCoverage.supported.length} Fields Supported</ThemedText>
+                <ThemedText type="small" style={{ color: '#208AEF' }}>ℹ {result.fieldCoverage.metadata.length} Fields Preserved as Metadata</ThemedText>
+
+                {result.fieldCoverage.unsupported.length > 0 && (
+                  <View style={{ marginTop: 10 }}>
+                    <ThemedText type="smallBold" style={{ color: 'orange' }}>Unsupported populated data detected in:</ThemedText>
+                    {result.fieldCoverage.unsupported.map((f, i) => (
+                      <ThemedText key={i} type="small">• {f}</ThemedText>
+                    ))}
+                  </View>
+                )}
+
+                {result.fieldCoverage.missing.length > 0 && (
+                  <View style={{ marginTop: 10 }}>
+                    <ThemedText type="smallBold" style={{ color: 'gray' }}>Fields not present in source:</ThemedText>
+                    <ThemedText type="small">• {result.fieldCoverage.missing.length} fields</ThemedText>
+                  </View>
+                )}
+              </View>
+            )}
+
             {result.warnings.length > 0 && (
               <View style={[styles.statsCard, { borderColor: 'orange' }]}>
                 <ThemedText type="defaultSemiBold" style={{ color: 'orange' }}>Warnings:</ThemedText>

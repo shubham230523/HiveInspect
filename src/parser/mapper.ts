@@ -1,6 +1,7 @@
 import { SPECTORA_COLUMNS } from './constants';
 import { SpectoraRawRow } from './types';
 import { NormalizedSpectoraRow } from './normalized-models';
+import { AnswerType } from '../domain/enums';
 
 export function mapRawRow(raw: SpectoraRawRow): NormalizedSpectoraRow {
   const getStr = (col: string) => String(raw[col] || '').trim();
@@ -15,6 +16,9 @@ export function mapRawRow(raw: SpectoraRawRow): NormalizedSpectoraRow {
     return val === 'true' || val === '1' || val === 'yes';
   };
 
+  const rawAnswerType = getStr(SPECTORA_COLUMNS.ANSWER_TYPE);
+  const normalizedAnswerType = normalizeAnswerType(rawAnswerType);
+
   return {
     sectionName: getStr(SPECTORA_COLUMNS.SECTION_NAME),
     itemName: getStr(SPECTORA_COLUMNS.ITEM_NAME),
@@ -26,7 +30,7 @@ export function mapRawRow(raw: SpectoraRawRow): NormalizedSpectoraRow {
     unitTypeOptions: getStr(SPECTORA_COLUMNS.UNIT_TYPE_OPTIONS),
     recommendation: getStr(SPECTORA_COLUMNS.RECOMMENDATION),
     order: getNum(SPECTORA_COLUMNS.ORDER),
-    answerType: getStr(SPECTORA_COLUMNS.ANSWER_TYPE),
+    answerType: normalizedAnswerType,
     defaultValue: getStr(SPECTORA_COLUMNS.DEFAULT_VALUE),
     defaultValue2: getStr(SPECTORA_COLUMNS.DEFAULT_VALUE_2),
     defaultUnitType: getStr(SPECTORA_COLUMNS.DEFAULT_UNIT_TYPE),
@@ -39,8 +43,19 @@ export function mapRawRow(raw: SpectoraRawRow): NormalizedSpectoraRow {
     uses: getStr(SPECTORA_COLUMNS.USES),
     lastModified: getStr(SPECTORA_COLUMNS.LAST_MODIFIED),
     photos: mapPhotos(raw),
-    rawMetadata: { ...raw },
+    rawMetadata: { ...raw, originalAnswerType: rawAnswerType },
   };
+}
+
+function normalizeAnswerType(type: string): AnswerType | string {
+  const t = type.toLowerCase();
+  if (Object.values(AnswerType).includes(t as AnswerType)) {
+    return t as AnswerType;
+  }
+  // Common Spectora variations
+  if (t === 'multiple choice') return AnswerType.CHECKBOX;
+
+  return type || AnswerType.TEXT;
 }
 
 function parseMultipleChoice(optionsStr: string): string[] {

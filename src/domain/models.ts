@@ -1,3 +1,5 @@
+import { AnswerType } from './enums';
+
 export type EntityId = string;
 
 export interface Template {
@@ -22,7 +24,7 @@ export interface Item {
   sectionId: EntityId;
   name: string;
   order: number;
-  answerType?: string;
+  answerType?: AnswerType | string;
   options?: string[];
   category?: string;
   commentType?: string;
@@ -53,6 +55,13 @@ export interface TemplateWithHierarchy extends Template {
   sections: SectionWithItems[];
 }
 
+export interface FieldCoverageInfo {
+  supported: string[];
+  metadata: string[];
+  unsupported: string[];
+  missing: string[];
+}
+
 export interface ImportResult {
   success: boolean;
   template?: TemplateWithHierarchy;
@@ -64,4 +73,5 @@ export interface ImportResult {
   errors: string[];
   unsupportedFields: string[];
   malformedRows: number[];
+  fieldCoverage?: FieldCoverageInfo;
 }

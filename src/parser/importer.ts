@@ -1,8 +1,8 @@
 import { loadWorkbook, getHeaders, getSheetData, validateHeaders } from './excel-parser';
 import { mapRawRow } from './mapper';
 import { buildHierarchy } from './hierarchy-builder';
-import { ImportResult, TemplateWithHierarchy } from '../domain/models';
-import { SPECTORA_COLUMNS } from './constants';
+import { ImportResult, TemplateWithHierarchy, FieldCoverageInfo } from '../domain/models';
+import { SPECTORA_COLUMNS, FIELD_COVERAGE, FieldState } from './constants';
 
 export async function importSpectoraXls(
   data: ArrayBuffer | Uint8Array,
@@ -10,7 +10,6 @@ export async function importSpectoraXls(
 ): Promise<ImportResult> {
   const warnings: string[] = [];
   const errors: string[] = [];
-  const unsupportedFields: string[] = [];
   const malformedRows: number[] = [];
 
   try {
@@ -23,48 +22,55 @@ export async function importSpectoraXls(
       return createEmptyResult(errors);
     }
 
-    // Identify unsupported fields
-    const allSpectoraFields = Object.values(SPECTORA_COLUMNS);
-    headers.forEach(header => {
-      if (!allSpectoraFields.includes(header as any)) {
-        unsupportedFields.push(header);
+    const rawRows = getSheetData(workbook);
+
+    // Analyze Field Coverage
+    const fieldCoverage: FieldCoverageInfo = {
+      supported: [],
+      metadata: [],
+      unsupported: [],
+      missing: [],
+    };
+
+    const allSourceColumns = Object.values(SPECTORA_COLUMNS);
+    allSourceColumns.forEach(col => {
+      const isPresent = headers.includes(col);
+      const classification = FIELD_COVERAGE[col];
+
+      if (!isPresent) {
+        fieldCoverage.missing.push(col);
+      } else {
+        if (classification === FieldState.SUPPORTED) fieldCoverage.supported.push(col);
+        else if (classification === FieldState.PRESERVED_METADATA) fieldCoverage.metadata.push(col);
+        else if (classification === FieldState.UNSUPPORTED_BUT_DETECTED) {
+          // Check if it actually contains data
+          const hasData = rawRows.some(row => String(row[col] || '').trim() !== '');
+          if (hasData) {
+            fieldCoverage.unsupported.push(col);
+            warnings.push(`${col} contains data but photo migration is not currently supported.`);
+          }
+        }
       }
     });
 
-    const rawRows = getSheetData(workbook);
     const normalizedRows = rawRows.map((raw, index) => {
       try {
         return mapRawRow(raw);
       } catch (e) {
-        malformedRows.push(index + 2); // +2 for 1-based index and header row
+        malformedRows.push(index + 2);
         return null;
       }
     }).filter((r): r is any => r !== null);
 
     const template = buildHierarchy(templateName, normalizedRows);
 
-    // Additional validation for HTML and statistics
     let commentsCreated = 0;
     let itemsCreated = 0;
     template.sections.forEach(s => {
       itemsCreated += s.items.length;
       s.items.forEach(i => {
         commentsCreated += i.comments.length;
-        i.comments.forEach(c => {
-          if (c.text.includes('<') && c.text.includes('>')) {
-            // HTML detected and preserved
-          }
-        });
       });
-    });
-
-    // Check for specific unsupported fields that have data
-    const photoFields = Array.from({ length: 10 }, (_, i) => `Default Photo ${i + 1}`);
-    photoFields.forEach(field => {
-      const hasData = rawRows.some(row => row[field]);
-      if (hasData) {
-        warnings.push(`${field} contains data but photo migration is not currently supported.`);
-      }
     });
 
     return {
@@ -76,8 +82,9 @@ export async function importSpectoraXls(
       commentsCreated,
       warnings,
       errors,
-      unsupportedFields,
+      unsupportedFields: fieldCoverage.unsupported,
       malformedRows,
+      fieldCoverage,
     };
   } catch (e) {
     errors.push(`Import failed: ${e instanceof Error ? e.message : 'Unknown error'}`);

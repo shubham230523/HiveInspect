@@ -22,7 +22,7 @@ export const ItemSchema = z.object({
   sectionId: z.string(),
   name: z.string().min(1, "Item name is required"),
   order: z.number().int().nonnegative(),
-  answerType: z.string().optional(),
+  answerType: z.union([z.string(), z.any()]).optional(),
   options: z.array(z.string()).optional(),
   category: z.string().optional(),
   commentType: z.string().optional(),

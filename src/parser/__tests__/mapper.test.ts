@@ -1,6 +1,7 @@
 import { mapRawRow } from '../mapper';
 import { SPECTORA_COLUMNS } from '../constants';
 import { SpectoraRawRow } from '../types';
+import { AnswerType } from '../../domain/enums';
 
 describe('Spectora Mapper', () => {
   const mockRawRow: SpectoraRawRow = {
@@ -13,9 +14,10 @@ describe('Spectora Mapper', () => {
     [SPECTORA_COLUMNS.MULTIPLE_CHOICE_OPTIONS]: 'Option 1 | Option 2',
     [SPECTORA_COLUMNS.ORDER]: 5,
     [SPECTORA_COLUMNS.LOCKED]: 'true',
+    [SPECTORA_COLUMNS.ANSWER_TYPE]: 'boolean',
     [SPECTORA_COLUMNS.DEFAULT_PHOTO_1]: 'http://example.com/photo1.jpg',
     [SPECTORA_COLUMNS.DEFAULT_PHOTO_1_CAPTION]: 'Photo 1',
-  } as any; // Using any to avoid filling all 42 columns in mock
+  } as any;
 
   test('should map core fields correctly', () => {
     const normalized = mapRawRow(mockRawRow);
@@ -25,6 +27,19 @@ describe('Spectora Mapper', () => {
     expect(normalized.commentText).toBe('<p>Siding is cracked</p>');
     expect(normalized.commentType).toBe('Observation');
     expect(normalized.category).toBe('Major');
+    expect(normalized.answerType).toBe(AnswerType.BOOLEAN);
+  });
+
+  test('should normalize answer type', () => {
+    const row = { ...mockRawRow, [SPECTORA_COLUMNS.ANSWER_TYPE]: 'Multiple Choice' };
+    const normalized = mapRawRow(row as any);
+    expect(normalized.answerType).toBe(AnswerType.CHECKBOX);
+  });
+
+  test('should preserve unknown answer type', () => {
+    const row = { ...mockRawRow, [SPECTORA_COLUMNS.ANSWER_TYPE]: 'Super Fancy Type' };
+    const normalized = mapRawRow(row as any);
+    expect(normalized.answerType).toBe('Super Fancy Type');
   });
 
   test('should parse multiple choice options', () => {

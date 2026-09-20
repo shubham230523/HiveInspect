@@ -1,3 +1,5 @@
+import { AnswerType } from '../domain/enums';
+
 export interface NormalizedSpectoraRow {
   sectionName: string;
   itemName: string;
@@ -9,7 +11,7 @@ export interface NormalizedSpectoraRow {
   unitTypeOptions: string;
   recommendation: string;
   order: number;
-  answerType: string;
+  answerType: AnswerType | string;
   defaultValue: string;
   defaultValue2: string;
   defaultUnitType: string;

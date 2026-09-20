@@ -7,6 +7,7 @@ import { getTemplateHierarchy, saveTemplate } from '@/repository/template-reposi
 import { TemplateWithHierarchy } from '@/domain/models';
 import { Spacing } from '@/constants/theme';
 import { generateId } from '@/utils/ids';
+import { ItemEditor } from '@/components/item-editor';
 
 export default function TemplateEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -168,24 +169,15 @@ export default function TemplateEditorScreen() {
             </View>
 
             {section.items.map((item, iIdx) => (
-              <View key={item.id} style={styles.itemContainer}>
-                <ThemedText type="defaultSemiBold">Item: {item.name}</ThemedText>
-                {item.comments.map((comment, cIdx) => (
-                  <View key={comment.id} style={styles.commentContainer}>
-                    <ThemedText type="small">{comment.name}</ThemedText>
-                    <TextInput
-                      style={[styles.input, { minHeight: 60 }]}
-                      value={comment.text}
-                      multiline
-                      onChangeText={(val) => {
-                        const newSections = [...template.sections];
-                        newSections[sIdx].items[iIdx].comments[cIdx].text = val;
-                        setTemplate({...template, sections: newSections});
-                      }}
-                    />
-                  </View>
-                ))}
-              </View>
+              <ItemEditor
+                key={item.id}
+                item={item}
+                onChange={(updatedItem) => {
+                  const newSections = [...template.sections];
+                  newSections[sIdx].items[iIdx] = updatedItem;
+                  setTemplate({ ...template, sections: newSections });
+                }}
+              />
             ))}
           </View>
         ))}
