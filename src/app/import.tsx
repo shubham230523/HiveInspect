@@ -58,17 +58,28 @@ export default function ImportScreen() {
   };
 
   const handleConfirmImport = async () => {
-    if (!result?.template) return;
+    if (!result?.template || loading) return;
     setLoading(true);
     const { error } = await saveTemplate(result.template);
-    setLoading(false);
 
     if (error) {
-      Alert.alert('Error', 'Failed to save template to database');
+      setLoading(false);
+      const msg = error.message || 'Failed to save template to database';
+      if (Platform.OS === 'web') {
+        window.alert(`Error: ${msg}`);
+      } else {
+        Alert.alert('Error', msg);
+      }
     } else {
-      Alert.alert('Success', 'Template imported successfully', [
-        { text: 'OK', onPress: () => router.push('/') }
-      ]);
+      // Success
+      if (Platform.OS === 'web') {
+        window.alert('Template imported successfully');
+        router.replace('/');
+      } else {
+        Alert.alert('Success', 'Template imported successfully', [
+          { text: 'OK', onPress: () => router.replace('/') }
+        ]);
+      }
     }
   };
 

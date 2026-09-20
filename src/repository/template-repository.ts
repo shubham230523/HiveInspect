@@ -1,78 +1,25 @@
 import { supabase } from '../services/supabase';
-import { TemplateWithHierarchy, Template, Section, Item, Comment } from '../domain/models';
+import { TemplateWithHierarchy, Template } from '../domain/models';
 
+/**
+ * Saves a complete template hierarchy using a PostgreSQL RPC function.
+ * This ensures the operation is atomic (all or nothing).
+ */
 export async function saveTemplate(template: TemplateWithHierarchy): Promise<{ data: any; error: any }> {
   try {
-    // 1. Insert Template
-    const { data: templateData, error: templateError } = await supabase
-      .from('templates')
-      .insert({
+    const { data, error } = await supabase.rpc('import_template_hierarchy', {
+      p_template: {
         id: template.id,
         name: template.name,
         source: template.source,
         metadata: template.metadata || {},
-      })
-      .select()
-      .single();
+      },
+      p_sections: template.sections,
+    });
 
-    if (templateError) throw templateError;
+    if (error) throw error;
 
-    // 2. Insert Sections, Items, and Comments
-    for (const section of template.sections) {
-      const { data: sectionData, error: sectionError } = await supabase
-        .from('sections')
-        .insert({
-          id: section.id,
-          template_id: template.id,
-          name: section.name,
-          display_order: section.order,
-          metadata: section.metadata || {},
-        })
-        .select()
-        .single();
-
-      if (sectionError) throw sectionError;
-
-      for (const item of section.items) {
-        const { data: itemData, error: itemError } = await supabase
-          .from('items')
-          .insert({
-            id: item.id,
-            section_id: section.id,
-            name: item.name,
-            display_order: item.order,
-            answer_type: item.answerType,
-            options: item.options,
-            category: item.category,
-            comment_type: item.commentType,
-            recommendation: item.recommendation,
-            default_value: item.defaultValue,
-            metadata: item.metadata || {},
-          })
-          .select()
-          .single();
-
-        if (itemError) throw itemError;
-
-        if (item.comments.length > 0) {
-          const { error: commentsError } = await supabase
-            .from('comments')
-            .insert(item.comments.map(c => ({
-              id: c.id,
-              item_id: item.id,
-              name: c.name,
-              comment_text: c.text,
-              comment_type: c.type,
-              display_order: c.order,
-              metadata: c.metadata || {},
-            })));
-
-          if (commentsError) throw commentsError;
-        }
-      }
-    }
-
-    return { data: templateData, error: null };
+    return { data, error: null };
   } catch (e) {
     console.error('Error saving template:', e);
     return { data: null, error: e };
@@ -111,7 +58,6 @@ export async function getTemplateHierarchy(templateId: string): Promise<{ data: 
 
     if (sectionsError) throw sectionsError;
 
-    // Map back to domain model
     const hierarchy: TemplateWithHierarchy = {
       ...template,
       sections: (sections || []).map((s: any) => ({

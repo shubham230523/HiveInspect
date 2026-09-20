@@ -33,14 +33,19 @@ export default function TemplatesScreen() {
     const performDelete = async () => {
       const { error } = await deleteTemplate(id);
       if (error) {
-        Alert.alert('Error', 'Failed to delete template');
+        const msg = error.message || 'Failed to delete template';
+        if (Platform.OS === 'web') {
+          window.alert(`Error: ${msg}`);
+        } else {
+          Alert.alert('Error', msg);
+        }
       } else {
         fetchTemplates();
       }
     };
 
     if (Platform.OS === 'web') {
-      if (confirm('Are you sure you want to delete this template?')) {
+      if (window.confirm('Are you sure you want to delete this template?')) {
         performDelete();
       }
     } else {

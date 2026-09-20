@@ -1,7 +1,6 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
+import { DarkTheme, DefaultTheme, ThemeProvider, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, Platform } from 'react-native';
 import { useEffect } from 'react';
 
 SplashScreen.preventAutoHideAsync();
@@ -15,8 +14,13 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
+      <Stack screenOptions={{
+        headerStyle: { backgroundColor: colorScheme === 'dark' ? '#111' : '#fff' },
+        headerTitleStyle: { paddingLeft: Platform.OS === 'web' ? 20 : 0 }
+      }}>
         <Stack.Screen name="index" options={{ title: 'Hive Inspect Template Importer' }} />
+        <Stack.Screen name="import" options={{ title: 'Import Template' }} />
+        <Stack.Screen name="templates/[id]" options={{ title: 'Template Editor' }} />
       </Stack>
     </ThemeProvider>
   );
