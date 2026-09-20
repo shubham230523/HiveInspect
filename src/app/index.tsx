@@ -1,62 +1,116 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-
-import { AnimatedIcon } from '@/components/animated-icon';
-import { HintRow } from '@/components/hint-row';
+import React, { useEffect, useState } from 'react';
+import { StyleSheet, View, FlatList, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
+import { Stack, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { WebBadge } from '@/components/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { getTemplates, deleteTemplate } from '@/repository/template-repository';
+import { Template } from '@/domain/models';
+import { Spacing } from '@/constants/theme';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
+export default function TemplatesScreen() {
+  const router = useRouter();
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchTemplates = async () => {
+    setLoading(true);
+    const { data, error } = await getTemplates();
+    if (error) {
+      setError(error.message || 'Failed to load templates');
+    } else {
+      setTemplates(data || []);
+      setError(null);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    const performDelete = async () => {
+      const { error } = await deleteTemplate(id);
+      if (error) {
+        Alert.alert('Error', 'Failed to delete template');
+      } else {
+        fetchTemplates();
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm('Are you sure you want to delete this template?')) {
+        performDelete();
+      }
+    } else {
+      Alert.alert(
+        'Confirm Delete',
+        'Are you sure you want to delete this template?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Delete', style: 'destructive', onPress: performDelete },
+        ]
+      );
+    }
+  };
+
+  if (loading) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <ThemedView style={styles.center}>
+        <ActivityIndicator size="large" />
+      </ThemedView>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
 
-export default function HomeScreen() {
+  if (error) {
+    return (
+      <ThemedView style={styles.center}>
+        <ThemedText type="defaultSemiBold">{error}</ThemedText>
+        <TouchableOpacity onPress={fetchTemplates} style={styles.retryButton}>
+          <ThemedText>Retry</ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
+    );
+  }
+
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
-          </ThemedText>
-        </ThemedView>
+      <Stack.Screen options={{
+        title: 'Templates',
+        headerRight: () => (
+          <TouchableOpacity onPress={() => router.push('/import')} style={styles.headerButton}>
+            <ThemedText type="link">Import Template</ThemedText>
+          </TouchableOpacity>
+        )
+      }} />
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
-
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-          />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-          />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
+      {templates.length === 0 ? (
+        <View style={styles.center}>
+          <ThemedText>No templates found. Click "Import" to get started.</ThemedText>
+        </View>
+      ) : (
+        <FlatList
+          data={templates}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={styles.card}
+              onPress={() => router.push(`/templates/${item.id}`)}
+            >
+              <View style={styles.cardContent}>
+                <ThemedText type="subtitle">{item.name}</ThemedText>
+                <ThemedText type="small">Source: {item.source}</ThemedText>
+                <ThemedText type="small">Created: {new Date(item.createdAt).toLocaleDateString()}</ThemedText>
+              </View>
+              <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
+                <ThemedText style={{ color: 'red' }}>Delete</ThemedText>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={styles.list}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -64,35 +118,38 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
+    padding: 20,
+  },
+  list: {
+    padding: Spacing.four,
+  },
+  card: {
+    padding: Spacing.four,
+    marginBottom: Spacing.four,
+    borderRadius: 8,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
     flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
     alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
+    justifyContent: 'space-between',
   },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  cardContent: {
     flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
   },
-  title: {
-    textAlign: 'center',
+  headerButton: {
+    marginRight: 10,
   },
-  code: {
-    textTransform: 'uppercase',
+  retryButton: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: 'rgba(128, 128, 128, 0.2)',
+    borderRadius: 4,
   },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
-    paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+  deleteButton: {
+    padding: 10,
   },
 });
