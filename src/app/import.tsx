@@ -105,12 +105,37 @@ export default function ImportScreen() {
             <ThemedText type="defaultSemiBold">File: {fileName}</ThemedText>
 
             <View style={styles.statsCard}>
-              <ThemedText type="defaultSemiBold">Statistics:</ThemedText>
+              <ThemedText type="defaultSemiBold">Import Statistics:</ThemedText>
               <ThemedText>• Rows Processed: {result.rowsProcessed}</ThemedText>
               <ThemedText>• Sections: {result.sectionsCreated}</ThemedText>
               <ThemedText>• Items: {result.itemsCreated}</ThemedText>
               <ThemedText>• Comments: {result.commentsCreated}</ThemedText>
             </View>
+
+            {result.preservationStats \u0026\u0026 (
+              <View style={[styles.statsCard, { borderColor: \u0027green\u0027 }]}>
+                <ThemedText type="defaultSemiBold">Preservation Check:</ThemedText>
+                <View style={styles.row}>
+                   <View style={{ flex: 1 }}>
+                     <ThemedText type="smallBold">SOURCE</ThemedText>
+                     <ThemedText type="small">Sections: {result.preservationStats.source.sections}</ThemedText>
+                     <ThemedText type="small">Items: {result.preservationStats.source.items}</ThemedText>
+                     <ThemedText type="small">Comments: {result.preservationStats.source.comments}</ThemedText>
+                   </View>
+                   <View style={{ flex: 1 }}>
+                     <ThemedText type="smallBold">IMPORTED</ThemedText>
+                     <ThemedText type="small">Sections: {result.preservationStats.imported.sections}</ThemedText>
+                     <ThemedText type="small">Items: {result.preservationStats.imported.items}</ThemedText>
+                     <ThemedText type="small">Comments: {result.preservationStats.imported.comments}</ThemedText>
+                   </View>
+                </View>
+                {result.preservationStats.source.comments === result.preservationStats.imported.comments ? (
+                  <ThemedText type="small" style={{ color: \u0027green\u0027, marginTop: 5 }}>✓ 100% of rows preserved</ThemedText>
+                ) : (
+                  <ThemedText type="small" style={{ color: \u0027orange\u0027, marginTop: 5 }}>⚠ Some rows filtered or grouped</ThemedText>
+                )}
+              </View>
+            )}
 
             {result.fieldCoverage && (
               <View style={styles.statsCard}>
@@ -154,6 +179,23 @@ export default function ImportScreen() {
               </View>
             )}
 
+            {result.rowWarnings && result.rowWarnings.length > 0 && (
+               <View style={[styles.statsCard, { borderColor: \u0027#ffcc00\u0027 }]}>
+                 <ThemedText type="defaultSemiBold">Row-Level Warnings ({result.rowWarnings.length}):</ThemedText>
+                 <ScrollView style={{ maxHeight: 200, marginTop: 10 }}>
+                   {result.rowWarnings.slice(0, 50).map((w, i) =\u003e (
+                     <View key={i} style={{ marginBottom: 5, paddingBottom: 5, borderBottomWidth: 1, borderBottomColor: \u0027rgba(128,128,128,0.1)\u0027 }}>
+                       <ThemedText type="smallBold">Row {w.row}: {w.section} \u003e {w.item}</ThemedText>
+                       <ThemedText type="small">{w.message}</ThemedText>
+                     </View>
+                   ))}
+                   {result.rowWarnings.length \u003e 50 \u0026\u0026 (
+                     <ThemedText type="small">... and {result.rowWarnings.length - 50} more warnings.</ThemedText>
+                   )}
+                 </ScrollView>
+               </View>
+            )}
+
             <View style={styles.actions}>
               <TouchableOpacity
                 onPress={() => setResult(null)}
@@ -191,10 +233,14 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   pickButton: {
-    backgroundColor: '#208AEF',
+    backgroundColor: \u0027#208AEF\u0027,
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 8,
+  },
+  row: {
+    flexDirection: \u0027row\u0027,
+    marginTop: 10,
   },
   previewContainer: {
     gap: 20,

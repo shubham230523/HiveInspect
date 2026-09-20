@@ -62,6 +62,21 @@ export interface FieldCoverageInfo {
   missing: string[];
 }
 
+export interface ImportCounts {
+  rows?: number;
+  sections: number;
+  items: number;
+  comments: number;
+}
+
+export interface RowWarning {
+  row: number;
+  section: string;
+  item: string;
+  field: string;
+  message: string;
+}
+
 export interface ImportResult {
   success: boolean;
   template?: TemplateWithHierarchy;
@@ -74,4 +89,9 @@ export interface ImportResult {
   unsupportedFields: string[];
   malformedRows: number[];
   fieldCoverage?: FieldCoverageInfo;
+  preservationStats?: {
+    source: ImportCounts;
+    imported: ImportCounts;
+  };
+  rowWarnings?: RowWarning[];
 }
