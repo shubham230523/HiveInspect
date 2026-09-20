@@ -1,8 +1,8 @@
 import { loadWorkbook, getHeaders, getSheetData, validateHeaders } from './excel-parser';
-import { mapRawRow } from \u0027./mapper\u0027;
-import { buildHierarchy } from \u0027./hierarchy-builder\u0027;
-import { ImportResult, TemplateWithHierarchy, FieldCoverageInfo, RowWarning } from \u0027../domain/models\u0027;
-import { SPECTORA_COLUMNS, FIELD_COVERAGE, FieldState } from \u0027./constants\u0027;
+import { mapRawRow } from './mapper';
+import { buildHierarchy } from './hierarchy-builder';
+import { ImportResult, TemplateWithHierarchy, FieldCoverageInfo, RowWarning } from '../domain/models';
+import { SPECTORA_COLUMNS, FIELD_COVERAGE, FieldState } from './constants';
 
 export async function importSpectoraXls(
   data: ArrayBuffer | Uint8Array,
@@ -19,7 +19,7 @@ export async function importSpectoraXls(
     const validation = validateHeaders(headers);
 
     if (!validation.valid) {
-      errors.push(`Missing required headers: ${validation.missing.join(\u0027, \u0027)}`);
+      errors.push(`Missing required headers: ${validation.missing.join(', ')}`);
       return createEmptyResult(errors);
     }
 
@@ -27,17 +27,17 @@ export async function importSpectoraXls(
 
     // Identify unsupported fields that contain data per row
     const unsupportedColsWithData = Object.entries(FIELD_COVERAGE)
-      .filter(([_, state]) =\u003e state === FieldState.UNSUPPORTED_BUT_DETECTED)
-      .map(([col]) =\u003e col)
-      .filter(col =\u003e headers.includes(col));
+      .filter(([_, state]) => state === FieldState.UNSUPPORTED_BUT_DETECTED)
+      .map(([col]) => col)
+      .filter(col => headers.includes(col));
 
-    rawRows.forEach((row, index) =\u003e {
-      unsupportedColsWithData.forEach(col =\u003e {
-        if (String(row[col] || \u0027\u0027).trim() !== \u0027\u0027) {
+    rawRows.forEach((row, index) => {
+      unsupportedColsWithData.forEach(col => {
+        if (String(row[col] || '').trim() !== '') {
           rowWarnings.push({
             row: index + 2,
-            section: String(row[SPECTORA_COLUMNS.SECTION_NAME] || \u0027\u0027),
-            item: String(row[SPECTORA_COLUMNS.ITEM_NAME] || \u0027\u0027),
+            section: String(row[SPECTORA_COLUMNS.SECTION_NAME] || ''),
+            item: String(row[SPECTORA_COLUMNS.ITEM_NAME] || ''),
             field: col,
             message: `${col} contains data but photo migration is not supported.`,
           });
@@ -68,7 +68,6 @@ export async function importSpectoraXls(
           const hasData = rawRows.some(row => String(row[col] || '').trim() !== '');
           if (hasData) {
             fieldCoverage.unsupported.push(col);
-            warnings.push(`${col} contains data but photo migration is not currently supported.`);
           }
         }
       }
@@ -110,9 +109,9 @@ export async function importSpectoraXls(
       preservationStats: {
         source: {
           rows: rawRows.length,
-          sections: new Set(rawRows.map(r =\u003e String(r[SPECTORA_COLUMNS.SECTION_NAME] || \u0027\u0027).trim())).size,
-          items: new Set(rawRows.map(r =\u003e `${r[SPECTORA_COLUMNS.SECTION_NAME]}|${r[SPECTORA_COLUMNS.ITEM_NAME]}`)).size,
-          comments: rawRows.filter(r =\u003e r[SPECTORA_COLUMNS.COMMENT_NAME] || r[SPECTORA_COLUMNS.COMMENT_TEXT]).length,
+          sections: new Set(rawRows.map(r => String(r[SPECTORA_COLUMNS.SECTION_NAME] || '').trim())).size,
+          items: new Set(rawRows.map(r => `${r[SPECTORA_COLUMNS.SECTION_NAME]}|${r[SPECTORA_COLUMNS.ITEM_NAME]}`)).size,
+          comments: rawRows.filter(r => r[SPECTORA_COLUMNS.COMMENT_NAME] || r[SPECTORA_COLUMNS.COMMENT_TEXT]).length,
         },
         imported: {
           sections: template.sections.length,
