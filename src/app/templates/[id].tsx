@@ -31,14 +31,25 @@ export default function TemplateEditorScreen() {
   }, [id]);
 
   const handleSave = async () => {
-    if (!template) return;
+    if (!template || saving) return;
     setSaving(true);
-    // Note: This logic might need refinement for "updates" vs "new" in a real app,
-    // but for the MVP we'll reuse saveTemplate which currently inserts.
-    // In a real app we'd have an updateRepository function.
-    // For this assignment, I'll just Alert that Save is simulated or implemented as "Override".
-    Alert.alert('Info', 'Save functionality would typically update existing records. For this MVP, consider the template state updated in memory.');
+    const { error } = await saveTemplate(template);
     setSaving(false);
+
+    if (error) {
+      const msg = error.message || 'Failed to save changes';
+      if (Platform.OS === 'web') {
+        window.alert(`Error: ${msg}`);
+      } else {
+        Alert.alert('Error', msg);
+      }
+    } else {
+      if (Platform.OS === 'web') {
+        window.alert('Changes saved successfully');
+      } else {
+        Alert.alert('Success', 'Changes saved successfully');
+      }
+    }
   };
 
   const handleDuplicate = async () => {
