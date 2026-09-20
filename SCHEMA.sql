@@ -3,6 +3,8 @@
 -- Enable UUID extension
 create extension if not exists "uuid-ossp";
 
+-- 1. Tables Creation (Idempotent)
+
 -- Templates Table
 create table if not exists templates (
   id uuid primary key default uuid_generate_v4(),
@@ -48,10 +50,13 @@ create table if not exists comments (
   metadata jsonb default '{}'::jsonb
 );
 
--- Indexes
+-- 2. Indexes
+
 create index if not exists idx_sections_template_id on sections(template_id);
 create index if not exists idx_items_section_id on items(section_id);
 create index if not exists idx_comments_item_id on comments(item_id);
+
+-- 3. Utility Functions & Triggers
 
 -- Updated At Trigger Function
 create or replace function update_updated_at_column()
@@ -62,14 +67,17 @@ begin
 end;
 $$ language plpgsql;
 
--- Remove the existing trigger to avoid the "already exists" error
+-- Safely recreate the trigger
 drop trigger if exists update_templates_updated_at on templates;
-
 create trigger update_templates_updated_at
 before update on templates
 for each row execute function update_updated_at_column();
 
--- Atomic Import/Upsert Function
+-- 4. Atomic Import/Upsert Function
+-- This function handles the entire template hierarchy in a single transaction.
+-- It supports both new imports and updates to existing templates (Upsert).
+-- It includes defensive type checking to prevent errors with scalar values.
+
 create or replace function import_template_hierarchy(
   p_template jsonb,
   p_sections jsonb
@@ -113,7 +121,7 @@ begin
         metadata = excluded.metadata
       returning id into v_section_id;
 
-      -- 3. Loop through Items
+      -- 3. Loop through Items in Section
       if jsonb_typeof(v_section->'items') = 'array' then
         for v_item in select * from jsonb_array_elements(v_section->'items') loop
           insert into items (id, section_id, name, display_order, answer_type, options, category, comment_type, recommendation, default_value, metadata)
@@ -146,7 +154,7 @@ begin
             metadata = excluded.metadata
           returning id into v_item_id;
 
-          -- 4. Loop through Comments
+          -- 4. Loop through Comments in Item
           if jsonb_typeof(v_item->'comments') = 'array' then
             for v_comment in select * from jsonb_array_elements(v_item->'comments') loop
               insert into comments (id, item_id, name, comment_text, comment_type, display_order, metadata)
