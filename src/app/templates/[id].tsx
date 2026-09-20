@@ -81,12 +81,21 @@ export default function TemplateEditorScreen() {
     setSaving(false);
 
     if (error) {
-      Alert.alert('Error', 'Failed to duplicate template');
+      const msg = error.message || 'Failed to duplicate template';
+      if (Platform.OS === 'web') {
+        window.alert(`Error: ${msg}`);
+      } else {
+        Alert.alert('Error', msg);
+      }
     } else {
-      Alert.alert('Success', 'Template duplicated successfully', [
-        { text: 'View Copy', onPress: () => router.push(`/templates/${newTemplate.id}`) },
-        { text: 'OK' }
-      ]);
+      if (Platform.OS === 'web') {
+        window.alert('Template duplicated successfully');
+        router.push(`/templates/${newTemplate.id}`);
+      } else {
+        Alert.alert('Success', 'Template duplicated successfully', [
+          { text: 'OK', onPress: () => router.push(`/templates/${newTemplate.id}`) }
+        ]);
+      }
     }
   };
 

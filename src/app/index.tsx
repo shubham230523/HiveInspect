@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { StyleSheet, View, FlatList, TouchableOpacity, ActivityIndicator, Alert, Platform } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useFocusEffect } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getTemplates, deleteTemplate } from '@/repository/template-repository';
@@ -13,8 +13,8 @@ export default function TemplatesScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchTemplates = async () => {
-    setLoading(true);
+  const fetchTemplates = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     const { data, error } = await getTemplates();
     if (error) {
       setError(error.message || 'Failed to load templates');
@@ -25,9 +25,11 @@ export default function TemplatesScreen() {
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchTemplates();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchTemplates(templates.length === 0);
+    }, [])
+  );
 
   const handleDelete = async (id: string) => {
     const performDelete = async () => {
