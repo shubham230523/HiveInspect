@@ -1,0 +1,953 @@
+You are an expert senior React Native + TypeScript engineer working inside Android Studio.
+
+Your task is to build the complete application described below from 0% to 100%.
+
+# PROJECT
+
+Build a web application called:
+
+Hive Inspect Template Importer
+
+The application imports inspection-template spreadsheets exported from Spectora, converts them into a structured editable template model, stores the result in Supabase/PostgreSQL, and allows the user to view, edit, and independently duplicate templates.
+
+The primary target for this assignment is WEB.
+
+Use React Native Web so the architecture can later support Android/iOS with maximum code reuse.
+
+# IMPORTANT DEVELOPMENT RULES
+
+1. Execute the plan sequentially from Step 1 to Step 100.
+2. Complete ONLY one step at a time.
+3. Do not implement future steps early unless required to make the current step work.
+4. After every step, run the relevant tests/checks.
+5. If a test fails, fix it before proceeding.
+6. Keep the application runnable after every step.
+7. Commit after every logical milestone.
+8. Never delete working functionality just to simplify implementation.
+9. Do not hardcode the InterNACHI template structure.
+10. The importer must work with other Spectora exports having the same general structure.
+11. Do not silently discard imported information.
+12. Preserve source text exactly whenever possible.
+13. Preserve hierarchy.
+14. Preserve ordering.
+15. Preserve HTML/rich text contained in comment fields.
+16. Clearly report unsupported fields/content.
+17. Distinguish between "not present in source" and "present but unsupported".
+18. Do not use an LLM for the core spreadsheet parser. Use deterministic parsing.
+19. Do not build unnecessary inspection-report functionality.
+20. Do not build native Android/iOS functionality during the assignment unless required by the shared architecture.
+21. The supplied Spectora XLS file must be used as a real test fixture.
+22. Do not claim a feature is complete unless it has actually been tested.
+23. Prefer simple, maintainable solutions over over-engineering.
+24. Keep the application suitable for a 2-day take-home assignment.
+25. At the end, perform a complete end-to-end acceptance test.
+
+# TECH STACK
+
+Use:
+
+* React Native
+* React Native Web
+* TypeScript
+* Expo
+* Supabase
+* PostgreSQL
+* SheetJS/xlsx for XLS/XLSX parsing
+* Zod for validation
+* React Hook Form for editing forms where useful
+* Jest for unit/integration tests
+* Vercel for web deployment
+
+Do NOT introduce:
+
+* Spring Boot
+* Kotlin/KMP
+* Microservices
+* Kafka
+* Redis
+* unnecessary AI/LLM processing
+* unnecessary native dependencies
+
+# CORE ARCHITECTURE
+
+Use a clean separation between:
+
+1. Source spreadsheet parsing
+2. Normalization
+3. Domain model
+4. Validation
+5. Persistence
+6. UI
+
+The architecture should conceptually be:
+
+Spectora XLS
+↓
+Raw spreadsheet parser
+↓
+Raw Spectora rows
+↓
+Normalization
+↓
+Validation
+↓
+Domain Template Model
+↓
+Supabase PostgreSQL
+↓
+React Native Web UI
+
+The importer must not depend on UI code.
+
+# DOMAIN MODEL
+
+Use this conceptual hierarchy:
+
+Template
+└── Section
+└── Item
+└── Comment
+
+Every entity must have a stable unique ID.
+
+Template should contain information such as:
+
+* id
+* name
+* source
+* createdAt
+* updatedAt
+
+Section:
+
+* id
+* templateId
+* name
+* order
+
+Item:
+
+* id
+* sectionId
+* name
+* order
+* answerType
+* options
+* category
+* commentType
+* recommendation
+* defaultValue
+* additional metadata when appropriate
+
+Comment:
+
+* id
+* itemId
+* name
+* text
+* type
+* order
+
+Do not blindly create a database column for every Spectora column.
+
+Instead, create a clean domain model and preserve additional source metadata where useful.
+
+# THE SUPPLIED SPECTORA FILE
+
+A Spectora export named:
+
+InterNACHI Residential -2026-09-20.xls
+
+is supplied as part of this task.
+
+It contains:
+
+* approximately 392 data rows
+* 42 columns
+
+The application must inspect and handle the source schema generically.
+
+# THE 42 SPECTORA COLUMNS
+
+Understand all 42 fields:
+
+1. Section Name
+2. Item Name
+3. Comment Name
+4. Comment Text
+5. Comment Type
+6. Category
+7. Multiple Choice Options
+8. Unit Type Options
+9. Recommendation
+10. Order
+11. Answer Type
+12. Default Value
+13. Default Value 2
+14. Default Unit Type
+15. Default Location
+16. Default Estimate Min
+17. Default Estimate Max
+18. Locked
+19. Simple Format
+20. Disable Photos
+21. Uses
+22. Default Photo 1
+23. Default Photo 1 Caption
+24. Default Photo 2
+25. Default Photo 2 Caption
+26. Default Photo 3
+27. Default Photo 3 Caption
+28. Default Photo 4
+29. Default Photo 4 Caption
+30. Default Photo 5
+31. Default Photo 5 Caption
+32. Default Photo 6
+33. Default Photo 6 Caption
+34. Default Photo 7
+35. Default Photo 7 Caption
+36. Default Photo 8
+37. Default Photo 8 Caption
+38. Default Photo 9
+39. Default Photo 9 Caption
+40. Default Photo 10
+41. Default Photo 10 Caption
+42. Last Modified
+
+# FIELD HANDLING STRATEGY
+
+Core fields that MUST be preserved:
+
+* Section Name
+* Item Name
+* Comment Name
+* Comment Text
+* Comment Type
+* Category
+* Multiple Choice Options
+* Recommendation
+* Order
+* Answer Type
+
+Additional metadata should be preserved when practical:
+
+* Unit Type Options
+* Default Value
+* Default Value 2
+* Default Unit Type
+* Default Location
+* Default Estimate Min
+* Default Estimate Max
+* Locked
+* Simple Format
+* Disable Photos
+* Uses
+* Last Modified
+
+Default photo fields may be unsupported in the 2-day MVP, but they must NOT be silently ignored.
+
+If unsupported data exists, show it in the import result.
+
+Example:
+
+Import completed
+
+392 rows processed
+24 sections
+368 items
+XXX comments
+
+Warnings:
+
+* Default Photo 1 contains data but photo migration is not currently supported.
+* Default Photo 2 contains data but photo migration is not currently supported.
+
+If a field is completely absent/empty in the source, distinguish that from unsupported content.
+
+# HTML/RICH TEXT
+
+Some Comment Text values may contain HTML such as:
+
+<p>...</p>
+
+Do NOT blindly strip HTML.
+
+Preserve the original content.
+
+The editor must not accidentally destroy HTML.
+
+If the UI cannot render a particular HTML construct safely, preserve the original source text and clearly document the limitation.
+
+# IMPORTER REQUIREMENTS
+
+The importer must:
+
+* read XLS/XLSX
+* validate headers
+* parse rows
+* normalize values
+* construct sections
+* construct items
+* construct comments
+* preserve ordering
+* preserve text
+* preserve answer types
+* preserve options
+* preserve relevant metadata
+* detect unsupported content
+* detect malformed rows
+* return useful import statistics
+* return warnings/errors
+* never silently lose data
+
+Do not hardcode names such as "Exterior", "Roof", etc.
+
+# IMPORT RESULT
+
+Create an ImportResult model containing useful information such as:
+
+* success
+* template
+* rowsProcessed
+* sectionsCreated
+* itemsCreated
+* commentsCreated
+* warnings
+* errors
+* unsupportedFields
+* malformedRows
+
+# DATABASE
+
+Use Supabase PostgreSQL.
+
+At minimum create:
+
+templates
+sections
+items
+comments
+
+Use foreign keys.
+
+Use indexes where useful.
+
+Ensure cascading behavior is safe and deliberate.
+
+# DUPLICATION
+
+Duplicate must create an independent copy.
+
+When duplicating:
+
+* generate new template ID
+* generate new section IDs
+* generate new item IDs
+* generate new comment IDs
+* preserve content
+* preserve hierarchy
+* preserve ordering
+
+Editing the duplicate must never modify the original.
+
+Editing the original must never modify the duplicate.
+
+# UI
+
+Build a clean desktop-oriented web interface.
+
+Main flow:
+
+Templates
+↓
+Import Template
+↓
+Choose XLS
+↓
+Parse
+↓
+Preview
+↓
+Import
+↓
+Template Editor
+
+Template screen should make hierarchy obvious.
+
+Example:
+
+Templates
+
+InterNACHI Residential
+
+Exterior
+Siding, Flashing & Trim
+Cracking - Major
+Cracking - Minor
+Water Intrusion
+
+Roof
+Roof Coverings
+Flashings
+
+Allow the user to select an item and edit it.
+
+# EDITING
+
+Allow editing of:
+
+* template name
+* section name
+* item name
+* comment name
+* comment text
+* supported item metadata
+
+Save changes to Supabase.
+
+After saving, reload from the database and verify persistence.
+
+# ERROR HANDLING
+
+Handle at least:
+
+* invalid file
+* unsupported file type
+* missing required headers
+* malformed row
+* unsupported content
+* empty spreadsheet
+* parsing failure
+* database failure
+
+Errors must be understandable to a normal user.
+
+# TESTING
+
+Maintain tests throughout the project.
+
+Important tests include:
+
+* parser tests
+* header validation
+* row normalization
+* hierarchy creation
+* ordering
+* HTML preservation
+* multiple-choice parsing
+* answer-type preservation
+* unsupported-field detection
+* malformed-row handling
+* database persistence
+* editing
+* duplication isolation
+
+Use the supplied Spectora XLS as a fixture.
+
+Create a golden/expected-data validation test where practical.
+
+# 100 STEP IMPLEMENTATION PLAN
+
+## PHASE 1 — FOUNDATION
+
+STEP 1
+Project is already created using "npx create-expo-app@latest HiveInspect". Don't create a new one.
+
+STEP 2
+Configure React Native Web and verify the web application starts.
+
+STEP 3
+Remove unnecessary starter/demo code.
+
+STEP 4
+Create the src directory structure.
+
+STEP 5
+Create Template, Section, Item and Comment TypeScript models.
+
+STEP 6
+Create stable ID utilities.
+
+STEP 7
+Define hierarchy relationships.
+
+STEP 8
+Define explicit ordering fields.
+
+STEP 9
+Add Zod validation schemas.
+
+STEP 10
+Configure Jest and write the first domain-model tests.
+
+Commit:
+chore: initialize template importer architecture
+
+## PHASE 2 — SPECTORA PARSER
+
+STEP 11
+Add the supplied InterNACHI XLS file as a test fixture.
+
+STEP 12
+Create documentation describing the Spectora export schema.
+
+STEP 13
+Create constants for all 42 source column names.
+
+STEP 14
+Install/configure SheetJS.
+
+STEP 15
+Implement workbook loading.
+
+STEP 16
+Implement sheet extraction.
+
+STEP 17
+Convert spreadsheet rows into raw row objects.
+
+STEP 18
+Validate required headers.
+
+STEP 19
+Handle malformed/invalid workbook errors.
+
+STEP 20
+Create parser tests verifying the supplied file can be opened and contains the expected source structure.
+
+Commit:
+feat: add Spectora spreadsheet parser
+
+## PHASE 3 — FIELD MAPPING
+
+STEP 21
+Create SpectoraRawRow type.
+
+STEP 22
+Map Section Name.
+
+STEP 23
+Map Item Name.
+
+STEP 24
+Map Comment Name.
+
+STEP 25
+Map Comment Text without destroying HTML.
+
+STEP 26
+Map Comment Type.
+
+STEP 27
+Map Category.
+
+STEP 28
+Parse Multiple Choice Options into structured options.
+
+STEP 29
+Preserve Unit Type Options.
+
+STEP 30
+Preserve Recommendation.
+
+STEP 31
+Preserve Order.
+
+STEP 32
+Preserve Answer Type.
+
+STEP 33
+Preserve default fields.
+
+STEP 34
+Preserve estimate fields.
+
+STEP 35
+Preserve configuration fields.
+
+STEP 36
+Represent all default-photo fields in source metadata.
+
+STEP 37
+Preserve Last Modified.
+
+STEP 38
+Preserve unknown/unmapped source values in additional metadata where appropriate.
+
+STEP 39
+Create normalized Spectora model.
+
+STEP 40
+Write mapping tests covering every source column.
+
+Commit:
+feat: map complete Spectora source schema
+
+## PHASE 4 — HIERARCHY
+
+STEP 41
+Create section builder.
+
+STEP 42
+Prevent duplicate sections.
+
+STEP 43
+Preserve section ordering.
+
+STEP 44
+Create item builder.
+
+STEP 45
+Prevent duplicate items.
+
+STEP 46
+Preserve item ordering.
+
+STEP 47
+Create comment builder.
+
+STEP 48
+Preserve comment ordering.
+
+STEP 49
+Handle empty optional fields.
+
+STEP 50
+Handle unexpected hierarchy without silently dropping rows.
+
+Commit:
+feat: build Spectora template hierarchy
+
+## PHASE 5 — TRUSTWORTHY IMPORT
+
+STEP 51
+Create ImportResult.
+
+STEP 52
+Track import statistics.
+
+STEP 53
+Track unsupported fields.
+
+STEP 54
+Track missing fields.
+
+STEP 55
+Distinguish missing from unsupported.
+
+STEP 56
+Detect HTML/rich text.
+
+STEP 57
+Preserve HTML/rich text.
+
+STEP 58
+Verify encoded entities are preserved.
+
+STEP 59
+Detect malformed rows.
+
+STEP 60
+Write validation/error-handling tests.
+
+Commit:
+feat: add trustworthy import validation
+
+## PHASE 6 — SUPABASE
+
+STEP 61
+Configure Supabase environment variables.
+
+STEP 62
+Create templates table.
+
+STEP 63
+Create sections table.
+
+STEP 64
+Create items table.
+
+STEP 65
+Create comments table.
+
+STEP 66
+Add metadata storage for additional imported information.
+
+STEP 67
+Add foreign keys.
+
+STEP 68
+Add useful database indexes.
+
+STEP 69
+Create repository/data-access functions.
+
+STEP 70
+Test persistence by saving and retrieving an imported template.
+
+Commit:
+feat: add Supabase persistence
+
+## PHASE 7 — TEMPLATE UI
+
+STEP 71
+Create Templates screen.
+
+STEP 72
+Load templates from Supabase.
+
+STEP 73
+Create template list/cards.
+
+STEP 74
+Create empty state.
+
+STEP 75
+Create loading state.
+
+STEP 76
+Create database error state.
+
+STEP 77
+Add Import Template action.
+
+STEP 78
+Allow opening a template.
+
+STEP 79
+Add delete template with confirmation.
+
+STEP 80
+Test template loading/opening/deleting states.
+
+Commit:
+feat: add template management UI
+
+## PHASE 8 — IMPORT UI
+
+STEP 81
+Implement web file selection.
+
+STEP 82
+Validate XLS/XLSX extension.
+
+STEP 83
+Create import preview screen.
+
+STEP 84
+Display source/template information.
+
+STEP 85
+Display warnings and unsupported content.
+
+STEP 86
+Add import confirmation.
+
+STEP 87
+Save imported template to Supabase.
+
+STEP 88
+Show import success statistics.
+
+STEP 89
+Show useful import failure information.
+
+STEP 90
+Perform a complete end-to-end import of the supplied InterNACHI XLS.
+
+Commit:
+feat: complete Spectora template import workflow
+
+## PHASE 9 — EDITOR AND DUPLICATION
+
+STEP 91
+Create template editor.
+
+STEP 92
+Allow section editing.
+
+STEP 93
+Allow item editing.
+
+STEP 94
+Allow comment editing.
+
+STEP 95
+Ensure HTML in comment text survives editing.
+
+STEP 96
+Persist edits to Supabase.
+
+STEP 97
+Reload and verify edits persisted.
+
+STEP 98
+Implement independent template duplication.
+
+STEP 99
+Test copy isolation in both directions.
+
+Commit:
+feat: add template editor and independent duplication
+
+## PHASE 10 — FINAL ACCEPTANCE
+
+STEP 100
+
+Perform the complete final acceptance test.
+
+Test this exact flow:
+
+Upload Spectora XLS
+↓
+Parse
+↓
+Validate
+↓
+Preview
+↓
+Import
+↓
+Save to Supabase
+↓
+Open template
+↓
+Navigate sections
+↓
+Navigate items
+↓
+Edit section
+↓
+Edit item
+↓
+Edit comment
+↓
+Save
+↓
+Reload
+↓
+Verify persistence
+↓
+Duplicate template
+↓
+Edit duplicate
+↓
+Verify original unchanged
+↓
+Edit original
+↓
+Verify duplicate unchanged
+
+Then test failure scenarios:
+
+* invalid file
+* malformed spreadsheet
+* missing required header
+* unsupported field/content
+* empty spreadsheet
+* database failure where practical
+
+Then:
+
+* run all Jest tests
+* run TypeScript checks
+* run production web build
+* verify no console errors
+* verify no obvious UI overflow
+* verify responsive desktop web layout
+* verify supplied XLS import
+* verify imported text
+* verify hierarchy
+* verify ordering
+* verify unsupported-field reporting
+* verify duplicate isolation
+
+Create/update:
+
+NOTES.md
+
+The NOTES.md must document:
+
+1. What was implemented.
+2. Supported input formats.
+3. The 42 source fields inspected.
+4. Which fields are mapped into the domain model.
+5. Which fields are preserved as metadata.
+6. Which fields are unsupported.
+7. How unsupported content is reported.
+8. How HTML/rich text is handled.
+9. How ordering is preserved.
+10. How hierarchy is preserved.
+11. How duplication works.
+12. Known limitations.
+13. Test strategy.
+14. Test results.
+15. Approximate implementation time.
+16. AI assistance used during development.
+
+Finally deploy the web application to Vercel.
+
+# FINAL QUALITY BAR
+
+The final application must feel like a real small internal tool, not a demo screen.
+
+A reviewer should be able to:
+
+1. Open the deployed application.
+2. Import the supplied Spectora template.
+3. See the import result.
+4. Navigate the template hierarchy.
+5. See that the source text survived.
+6. See that ordering survived.
+7. Edit content.
+8. Save changes.
+9. Reload and see the changes.
+10. Duplicate the template.
+11. Edit the duplicate.
+12. Verify the original remains unchanged.
+13. See warnings when unsupported content exists.
+14. Understand what the importer supports and does not support.
+
+# IMPORTANT SCOPE RULE
+
+Do NOT attempt to build every possible Spectora feature.
+
+The goal is not to recreate Spectora.
+
+The goal is to demonstrate:
+
+XLS import
++
+faithful structured transformation
++
+real persistence
++
+editable template
++
+independent duplication
++
+honest unsupported-content handling
++
+good engineering/testing
+
+# GEMINI EXECUTION BEHAVIOR
+
+At the start of each step:
+
+1. State the current step number.
+2. Briefly state what you will implement.
+3. Implement it.
+4. Run the relevant tests/checks.
+5. Report the result.
+6. If successful, continue to the next step.
+7. If unsuccessful, fix the problem before moving forward.
+
+Do not skip steps.
+
+Do not jump directly to Step 100.
+
+Do not generate a giant implementation before completing the incremental steps.
+
+Keep the project buildable throughout the entire process.
+
+Start with STEP 1 now.
