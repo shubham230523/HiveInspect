@@ -67,9 +67,30 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
           </View>
         );
       case AnswerType.DATE:
-        return <ThemedText type="small">Date Picker (Simulated)</ThemedText>;
+        return (
+          <View style={styles.controlRow}>
+            <TextInput
+              style={styles.inputSmall}
+              value={item.defaultValue}
+              placeholder="YYYY-MM-DD"
+              // @ts-ignore
+              type={Platform.OS === \u0027web\u0027 ? \u0027date\u0027 : \u0027default\u0027}
+              onChangeText={(val) =\u003e updateItem({ defaultValue: val })}
+            />
+          </View>
+        );
       case AnswerType.NUMBER:
-        return <ThemedText type="small">Numeric Input (Simulated)</ThemedText>;
+        return (
+          <View style={styles.controlRow}>
+            <TextInput
+              style={styles.inputSmall}
+              value={item.defaultValue}
+              placeholder="0.00"
+              keyboardType="numeric"
+              onChangeText={(val) =\u003e updateItem({ defaultValue: val })}
+            />
+          </View>
+        );
       case AnswerType.RANGE:
         return (
           <View style={styles.rangeContainer}>

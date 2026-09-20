@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Platform } from 'react-native';
-import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { Stack, useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getTemplateHierarchy, saveTemplate } from '@/repository/template-repository';
@@ -12,7 +12,9 @@ import { ItemEditor } from '@/components/item-editor';
 export default function TemplateEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const [template, setTemplate] = useState<TemplateWithHierarchy | null>(null);
+  const [initialTemplate, setInitialTemplate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -25,11 +27,60 @@ export default function TemplateEditorScreen() {
         Alert.alert('Error', 'Failed to load template');
       } else {
         setTemplate(data);
+        setInitialTemplate(JSON.stringify(data));
       }
       setLoading(false);
     };
     fetchTemplate();
   }, [id]);
+
+  const hasUnsavedChanges = initialTemplate !== JSON.stringify(template);
+
+  useEffect(() => {
+    const handleBeforeRemove = (e: any) => {
+      if (!hasUnsavedChanges) return;
+
+      e.preventDefault();
+
+      if (Platform.OS === 'web') {
+        if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
+          navigation.dispatch(e.data.action);
+        }
+      } else {
+        Alert.alert(
+          'Unsaved Changes',
+          'You have unsaved changes. Are you sure you want to leave?',
+          [
+            { text: 'Stay', style: 'cancel' },
+            {
+              text: 'Leave',
+              style: 'destructive',
+              onPress: () => navigation.dispatch(e.data.action),
+            },
+          ]
+        );
+      }
+    };
+
+    const beforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    navigation.addListener('beforeRemove', handleBeforeRemove);
+    if (Platform.OS === 'web') {
+      window.addEventListener('beforeunload', beforeUnload);
+    }
+
+    return () => {
+      navigation.removeListener('beforeRemove', handleBeforeRemove);
+      if (Platform.OS === 'web') {
+        window.removeEventListener('beforeunload', beforeUnload);
+      }
+    };
+  }, [hasUnsavedChanges, navigation]);
 
   const handleSave = async () => {
     if (!template || saving) return;
@@ -45,6 +96,7 @@ export default function TemplateEditorScreen() {
         Alert.alert('Error', msg);
       }
     } else {
+      setInitialTemplate(JSON.stringify(template));
       if (Platform.OS === 'web') {
         window.alert('Changes saved successfully');
       } else {
@@ -132,12 +184,12 @@ export default function TemplateEditorScreen() {
       <Stack.Screen options={{
         title: template.name,
         headerRight: () => (
-          <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flexDirection: 'row', gap: 10, marginRight: 10 }}>
             <TouchableOpacity onPress={handleDuplicate} disabled={saving}>
-              <ThemedText type="link">Duplicate</ThemedText>
+              <ThemedText type="linkPrimary">Duplicate</ThemedText>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleSave} disabled={saving}>
-              <ThemedText type="link">Save</ThemedText>
+              <ThemedText type="linkPrimary">Save</ThemedText>
             </TouchableOpacity>
           </View>
         )
@@ -145,7 +197,7 @@ export default function TemplateEditorScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.field}>
-          <ThemedText type="small">Template Name</ThemedText>
+          <ThemedText type="smallBold">Template Name</ThemedText>
           <TextInput
             style={styles.input}
             value={template.name}
