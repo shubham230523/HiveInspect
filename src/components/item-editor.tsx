@@ -74,8 +74,8 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
               value={item.defaultValue}
               placeholder="YYYY-MM-DD"
               // @ts-ignore
-              type={Platform.OS === \u0027web\u0027 ? \u0027date\u0027 : \u0027default\u0027}
-              onChangeText={(val) =\u003e updateItem({ defaultValue: val })}
+              type={Platform.OS === 'web' ? 'date' : 'default'}
+              onChangeText={(val) => updateItem({ defaultValue: val })}
             />
           </View>
         );
@@ -87,7 +87,7 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
               value={item.defaultValue}
               placeholder="0.00"
               keyboardType="numeric"
-              onChangeText={(val) =\u003e updateItem({ defaultValue: val })}
+              onChangeText={(val) => updateItem({ defaultValue: val })}
             />
           </View>
         );

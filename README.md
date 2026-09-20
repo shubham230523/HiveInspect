@@ -1,73 +1,55 @@
 # Hive Inspect Template Importer
 
-A robust web application built with React Native Web and TypeScript to streamline the process of migrating inspection templates from Spectora to Hive Inspect.
+A high-fidelity migration tool for converting Spectora inspection templates into structured Hive Inspect data. Built with React Native Web and TypeScript.
 
-## 🚀 Key Features
+## 🌟 Enhanced Features
 
--   **Deterministic XLS/XLSX Parsing**: Powered by SheetJS to handle large Spectora exports with precision.
--   **Full Schema Mapping**: Inspects and preserves all 42 Spectora source columns.
--   **Hierarchical Reconstruction**: Automatically rebuilds the `Template > Section > Item > Comment` relationship from flat spreadsheet rows.
--   **HTML Preservation**: Ensures rich text in inspection comments survives the import process.
--   **Supabase Integration**: Persistent storage using PostgreSQL with a clean repository pattern.
--   **Template Editor**: View and modify sections, items, and comments directly in the browser.
--   **Independent Duplication**: Create deep copies of templates with isolated IDs for safe editing.
--   **Trustworthy Import Reporting**: Detailed statistics, malformed row detection, and warnings for unsupported features (e.g., automated photo migration).
+-   **Deterministic 42-Field Mapping**: Every Spectora column is accounted for, classified, and preserved.
+-   **Hierarchical Re-building**: Reconstructs `Template > Section > Item > Comment` trees while respecting the original source `Order`.
+-   **Transparency Reporting**: Post-import summary with detailed statistics and a "Preservation Check" to verify zero data loss.
+-   **Smart Template Editor**:
+    -   **Answer Type Aware**: Specialized controls for `boolean`, `date`, `number`, and `checkbox`.
+    -   **Multiple Choice Editor**: Full CRUD support for item options.
+    -   **HTML Preview**: Real-time rendering of rich text comments.
+-   **Atomic Persistence**: Secure saving via PostgreSQL RPC functions in Supabase.
+-   **Deep Duplication**: Create independent template copies with isolated UUIDs.
+-   **Navigation Guard**: Detects and warns about unsaved changes in the editor.
 
 ## 🛠 Tech Stack
 
--   **Frontend**: React Native Web, Expo, Expo Router
--   **Language**: TypeScript
--   **Data Validation**: Zod
+-   **Frontend**: Expo (React Native Web)
+-   **Backend**: Supabase (PostgreSQL)
 -   **Parsing**: SheetJS (xlsx)
--   **Backend/Database**: Supabase (PostgreSQL)
+-   **Validation**: Zod
 -   **Testing**: Jest
 
-## 📁 Project Structure
+## 🚀 Getting Started
 
--   `src/app`: File-based routing (Templates list, Import, Editor)
--   `src/domain`: Core TypeScript models and interfaces
--   `src/parser`: Logic for Excel extraction, mapping, and hierarchy building
--   `src/repository`: Data access layer for Supabase
--   `src/validation`: Zod schemas for runtime data safety
--   `src/utils`: Shared utilities (ID generation, etc.)
-
-## 🚦 Getting Started
-
-### 1. Prerequisites
--   Node.js (v18+)
--   npm or yarn
-
-### 2. Environment Setup
-Create a `.env` file in the root (see `.env.example`):
+### 1. Environment
+Create a `.env` file from `.env.example`:
 ```bash
-EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
-EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+EXPO_PUBLIC_SUPABASE_URL=...
+EXPO_PUBLIC_SUPABASE_ANON_KEY=...
 ```
 
-### 3. Database Setup
-Execute the SQL found in `SCHEMA.sql` in your Supabase SQL Editor to create the necessary tables and indexes.
+### 2. Database
+Run the SQL in `SCHEMA.sql` in your Supabase SQL Editor. This script is idempotent and sets up all tables, indexes, and the atomic import function.
 
-### 4. Installation
+### 3. Usage
 ```bash
 npm install
+npm run web
 ```
 
-### 5. Running the App
-```bash
-# Start Web Development Server
-npx expo start --web
-```
-
-### 6. Running Tests
+## 🧪 Verification
+Run the automated test suite to verify fidelity and robustness:
 ```bash
 npm test
 ```
 
-## 🧪 Testing with Fixtures
-The application includes a real-world test fixture located at:
-`src/parser/__tests__/fixtures/InterNACHI Residential -2026-09-20.xls`
+Includes verification against:
+- `src/parser/__tests__/fixtures/InterNACHI Residential -2026-09-20.xls` (Baseline)
+- `src/parser/__tests__/fixtures/Alternative_Template.ts` (Synthetic/Generic)
 
-The automated test suite verifies that this 392-row file is correctly transformed into the expected hierarchical structure.
-
-## 📝 Documentation
-Detailed developer notes, including field mapping strategy and architecture decisions, can be found in [NOTES.md](./NOTES.md).
+## 📝 Technical Documentation
+See [NOTES.md](./NOTES.md) for architectural details and field coverage classification.

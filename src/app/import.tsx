@@ -9,6 +9,7 @@ import { importSpectoraXls } from '@/parser/importer';
 import { saveTemplate } from '@/repository/template-repository';
 import { ImportResult } from '@/domain/models';
 import { Spacing } from '@/constants/theme';
+import { REQUIRED_HEADERS } from '@/parser/constants';
 
 export default function ImportScreen() {
   const router = useRouter();
@@ -112,8 +113,8 @@ export default function ImportScreen() {
               <ThemedText>• Comments: {result.commentsCreated}</ThemedText>
             </View>
 
-            {result.preservationStats \u0026\u0026 (
-              <View style={[styles.statsCard, { borderColor: \u0027green\u0027 }]}>
+            {result.preservationStats && (
+              <View style={[styles.statsCard, { borderColor: 'green' }]}>
                 <ThemedText type="defaultSemiBold">Preservation Check:</ThemedText>
                 <View style={styles.row}>
                    <View style={{ flex: 1 }}>
@@ -130,9 +131,9 @@ export default function ImportScreen() {
                    </View>
                 </View>
                 {result.preservationStats.source.comments === result.preservationStats.imported.comments ? (
-                  <ThemedText type="small" style={{ color: \u0027green\u0027, marginTop: 5 }}>✓ 100% of rows preserved</ThemedText>
+                  <ThemedText type="small" style={{ color: 'green', marginTop: 5 }}>✓ 100% of rows preserved</ThemedText>
                 ) : (
-                  <ThemedText type="small" style={{ color: \u0027orange\u0027, marginTop: 5 }}>⚠ Some rows filtered or grouped</ThemedText>
+                  <ThemedText type="small" style={{ color: 'orange', marginTop: 5 }}>⚠ Some rows filtered or grouped</ThemedText>
                 )}
               </View>
             )}
@@ -161,35 +162,40 @@ export default function ImportScreen() {
               </View>
             )}
 
-            {result.warnings.length > 0 && (
-              <View style={[styles.statsCard, { borderColor: 'orange' }]}>
-                <ThemedText type="defaultSemiBold" style={{ color: 'orange' }}>Warnings:</ThemedText>
-                {result.warnings.map((w, i) => (
-                  <ThemedText key={i} type="small">• {w}</ThemedText>
-                ))}
-              </View>
-            )}
-
             {result.errors.length > 0 && (
-              <View style={[styles.statsCard, { borderColor: 'red' }]}>
-                <ThemedText type="defaultSemiBold" style={{ color: 'red' }}>Errors:</ThemedText>
+              <View style={[styles.statsCard, { borderColor: '#ff4444', backgroundColor: '#fffafa' }]}>
+                <ThemedText type="defaultSemiBold" style={{ color: '#ff4444' }}>Import Failed:</ThemedText>
                 {result.errors.map((e, i) => (
-                  <ThemedText key={i} type="small">• {e}</ThemedText>
+                  <View key={i} style={{ marginTop: 10 }}>
+                    <ThemedText style={{ color: '#ff4444' }}>{e}</ThemedText>
+                    {e.includes('Missing required headers') && (
+                      <ThemedText type="small" style={{ marginTop: 5 }}>
+                        Please ensure your spreadsheet includes the following columns:
+                        {REQUIRED_HEADERS.join(', ')}.
+                      </ThemedText>
+                    )}
+                  </View>
                 ))}
+                <TouchableOpacity
+                  onPress={() => setResult(null)}
+                  style={[styles.secondaryButton, { marginTop: 15, alignSelf: 'flex-start' }]}
+                >
+                  <ThemedText>Try Another File</ThemedText>
+                </TouchableOpacity>
               </View>
             )}
 
             {result.rowWarnings && result.rowWarnings.length > 0 && (
-               <View style={[styles.statsCard, { borderColor: \u0027#ffcc00\u0027 }]}>
+               <View style={[styles.statsCard, { borderColor: '#ffcc00' }]}>
                  <ThemedText type="defaultSemiBold">Row-Level Warnings ({result.rowWarnings.length}):</ThemedText>
                  <ScrollView style={{ maxHeight: 200, marginTop: 10 }}>
-                   {result.rowWarnings.slice(0, 50).map((w, i) =\u003e (
-                     <View key={i} style={{ marginBottom: 5, paddingBottom: 5, borderBottomWidth: 1, borderBottomColor: \u0027rgba(128,128,128,0.1)\u0027 }}>
-                       <ThemedText type="smallBold">Row {w.row}: {w.section} \u003e {w.item}</ThemedText>
+                   {result.rowWarnings.slice(0, 50).map((w, i) => (
+                     <View key={i} style={{ marginBottom: 5, paddingBottom: 5, borderBottomWidth: 1, borderBottomColor: 'rgba(128,128,128,0.1)' }}>
+                       <ThemedText type="smallBold">Row {w.row}: {w.section} > {w.item}</ThemedText>
                        <ThemedText type="small">{w.message}</ThemedText>
                      </View>
                    ))}
-                   {result.rowWarnings.length \u003e 50 \u0026\u0026 (
+                   {result.rowWarnings.length > 50 && (
                      <ThemedText type="small">... and {result.rowWarnings.length - 50} more warnings.</ThemedText>
                    )}
                  </ScrollView>
@@ -233,13 +239,13 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   pickButton: {
-    backgroundColor: \u0027#208AEF\u0027,
+    backgroundColor: '#208AEF',
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 8,
   },
   row: {
-    flexDirection: \u0027row\u0027,
+    flexDirection: 'row',
     marginTop: 10,
   },
   previewContainer: {
