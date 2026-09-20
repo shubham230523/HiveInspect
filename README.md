@@ -1,56 +1,73 @@
-# Welcome to your Expo app 👋
+# Hive Inspect Template Importer
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A robust web application built with React Native Web and TypeScript to streamline the process of migrating inspection templates from Spectora to Hive Inspect.
 
-## Get started
+## 🚀 Key Features
 
-1. Install dependencies
+-   **Deterministic XLS/XLSX Parsing**: Powered by SheetJS to handle large Spectora exports with precision.
+-   **Full Schema Mapping**: Inspects and preserves all 42 Spectora source columns.
+-   **Hierarchical Reconstruction**: Automatically rebuilds the `Template > Section > Item > Comment` relationship from flat spreadsheet rows.
+-   **HTML Preservation**: Ensures rich text in inspection comments survives the import process.
+-   **Supabase Integration**: Persistent storage using PostgreSQL with a clean repository pattern.
+-   **Template Editor**: View and modify sections, items, and comments directly in the browser.
+-   **Independent Duplication**: Create deep copies of templates with isolated IDs for safe editing.
+-   **Trustworthy Import Reporting**: Detailed statistics, malformed row detection, and warnings for unsupported features (e.g., automated photo migration).
 
-   ```bash
-   npm install
-   ```
+## 🛠 Tech Stack
 
-2. Start the app
+-   **Frontend**: React Native Web, Expo, Expo Router
+-   **Language**: TypeScript
+-   **Data Validation**: Zod
+-   **Parsing**: SheetJS (xlsx)
+-   **Backend/Database**: Supabase (PostgreSQL)
+-   **Testing**: Jest
 
-   ```bash
-   npx expo start
-   ```
+## 📁 Project Structure
 
-In the output, you'll find options to open the app in a
+-   `src/app`: File-based routing (Templates list, Import, Editor)
+-   `src/domain`: Core TypeScript models and interfaces
+-   `src/parser`: Logic for Excel extraction, mapping, and hierarchy building
+-   `src/repository`: Data access layer for Supabase
+-   `src/validation`: Zod schemas for runtime data safety
+-   `src/utils`: Shared utilities (ID generation, etc.)
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## 🚦 Getting Started
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### 1. Prerequisites
+-   Node.js (v18+)
+-   npm or yarn
 
-## Get a fresh project
-
-When you're ready, run:
-
+### 2. Environment Setup
+Create a `.env` file in the root (see `.env.example`):
 ```bash
-npm run reset-project
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### 3. Database Setup
+Execute the SQL found in `SCHEMA.sql` in your Supabase SQL Editor to create the necessary tables and indexes.
 
-### Other setup steps
+### 4. Installation
+```bash
+npm install
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### 5. Running the App
+```bash
+# Start Web Development Server
+npx expo start --web
+```
 
-## Learn more
+### 6. Running Tests
+```bash
+npm test
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## 🧪 Testing with Fixtures
+The application includes a real-world test fixture located at:
+`src/parser/__tests__/fixtures/InterNACHI Residential -2026-09-20.xls`
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+The automated test suite verifies that this 392-row file is correctly transformed into the expected hierarchical structure.
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## 📝 Documentation
+Detailed developer notes, including field mapping strategy and architecture decisions, can be found in [NOTES.md](./NOTES.md).
