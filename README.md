@@ -2,6 +2,9 @@
 
 A high-fidelity migration tool for converting Spectora inspection templates into structured Hive Inspect data. Built with React Native Web and TypeScript.
 
+**[Live Demo on Vercel](https://hive-inspect-xi.vercel.app/)**
+
+
 ## 🌟 Enhanced Features
 
 -   **Deterministic 42-Field Mapping**: Every Spectora column is accounted for, classified, and preserved.
