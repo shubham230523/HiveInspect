@@ -5,12 +5,15 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getTemplateHierarchy, saveTemplate } from '@/repository/template-repository';
 import { TemplateWithHierarchy, SectionWithItems, ItemWithComments } from '@/domain/models';
-import { Spacing } from '@/constants/theme';
+import { AnswerType } from '@/domain/enums';
+import { Spacing, Colors } from '@/constants/theme';
 import { generateId } from '@/utils/ids';
 import { ItemEditor } from '@/components/item-editor';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { useTheme } from '@/hooks/use-theme';
 
 export default function TemplateEditorScreen() {
+  const theme = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const navigation = useNavigation();
@@ -24,6 +27,7 @@ export default function TemplateEditorScreen() {
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
   const [sidebarSearch, setSidebarSearch] = useState('');
+  const [headerFocused, setHeaderFocused] = useState(false);
 
   useEffect(() => {
     const fetchTemplate = async () => {
@@ -213,16 +217,35 @@ export default function TemplateEditorScreen() {
       <Stack.Screen options={{
         title: template.name,
         headerRight: () => (
-          <View style={{ flexDirection: 'row', gap: 20, marginRight: 20, alignItems: 'center' }}>
-            <ThemedText type="small" style={{ color: hasUnsavedChanges ? 'orange' : 'green' }}>{hasUnsavedChanges ? '● Unsaved Changes' : '✓ Saved'}</ThemedText>
-            <TouchableOpacity onPress={handleDuplicate} disabled={saving}><ThemedText type="link">Duplicate</ThemedText></TouchableOpacity>
-            <TouchableOpacity onPress={handleSave} disabled={saving || !hasUnsavedChanges} style={[styles.saveButton, !hasUnsavedChanges && { opacity: 0.5 }]}><ThemedText style={{ color: 'white' }}>{saving ? 'Saving...' : 'Save'}</ThemedText></TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: 16, marginRight: 20, alignItems: 'center' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginRight: 8 }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: hasUnsavedChanges ? '#F59E0B' : '#10B981' }} />
+              <ThemedText type="small" style={{ color: theme.textSecondary, fontWeight: '500' }}>
+                {hasUnsavedChanges ? 'Unsaved' : 'Saved'}
+              </ThemedText>
+            </View>
+            <TouchableOpacity
+              onPress={handleDuplicate}
+              disabled={saving}
+              style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 6, backgroundColor: 'rgba(128, 128, 128, 0.05)' }}
+            >
+              <ThemedText style={{ fontSize: 13, fontWeight: '600' }}>Duplicate</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSave}
+              disabled={saving || !hasUnsavedChanges}
+              style={[styles.saveButton, !hasUnsavedChanges && { opacity: 0.4, shadowOpacity: 0 }]}
+            >
+              <ThemedText style={{ color: 'white', fontSize: 13, fontWeight: '700' }}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </ThemedText>
+            </TouchableOpacity>
           </View>
         )
       }} />
 
-      <View style={styles.editorShell}>
-        <View style={styles.sidebar}>
+      <View style={[styles.editorShell, { backgroundColor: theme.background }]}>
+        <View style={[styles.sidebar, { backgroundColor: theme.backgroundElement }]}>
           <View style={styles.sidebarSearch}>
             <TextInput
               style={styles.sidebarSearchInput}
@@ -248,16 +271,20 @@ export default function TemplateEditorScreen() {
                           }}
                         >
                           <View style={styles.sidebarSection}>
+                            <View style={[styles.activeIndicator, selectedSectionId === section.id && !selectedItemId && styles.activeIndicatorVisible]} />
                             <TouchableOpacity
                               onPress={() => {
                                 setSelectedSectionId(section.id);
                                 setSelectedItemId(null);
                               }}
-                              style={[styles.sectionItem, selectedSectionId === section.id && !selectedItemId && styles.activeItem]}
+                              style={[
+                                styles.sectionItem,
+                                selectedSectionId === section.id && !selectedItemId && { backgroundColor: theme.backgroundSelected }
+                              ]}
                             >
                               <ThemedText type="defaultSemiBold" style={[styles.sectionText, selectedSectionId === section.id && styles.activeText]}>☰ {section.name}</ThemedText>
                             </TouchableOpacity>
-                            {(selectedSectionId === section.id || sidebarSearch) && (
+                            {!!(selectedSectionId === section.id || sidebarSearch) && (
                               <View style={styles.sidebarItems}>
                                 {section.items.map(item => (
                                   <TouchableOpacity
@@ -266,7 +293,7 @@ export default function TemplateEditorScreen() {
                                       setSelectedSectionId(section.id);
                                       setSelectedItemId(item.id);
                                     }}
-                                    style={[styles.itemItem, selectedItemId === item.id && styles.activeItem]}
+                                    style={[styles.itemItem, selectedItemId === item.id && { backgroundColor: theme.backgroundSelected }]}
                                   >
                                     <ThemedText type="small" style={[styles.itemText, selectedItemId === item.id && styles.activeText]}>• {item.name}</ThemedText>
                                   </TouchableOpacity>
@@ -302,17 +329,22 @@ export default function TemplateEditorScreen() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.mainContent}>
+        <View style={[styles.mainContent, { backgroundColor: theme.canvas }]}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {activeSection ? (
               <View style={styles.activeArea}>
                 <View style={styles.activeHeader}>
-                  <ThemedText type="subtitle">{activeSection.name}</ThemedText>
-                  <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                  <View style={{ flex: 1 }}>
+                    <ThemedText type="smallBold" style={{ color: theme.textSecondary, marginBottom: 8, letterSpacing: 1, opacity: 0.6 }}>SECTION</ThemedText>
                     <TextInput
-                      style={styles.renameInput}
-                      placeholder="Rename Section"
+                      style={[
+                        styles.renameInput,
+                        { color: theme.text, borderBottomWidth: 2, borderBottomColor: headerFocused ? '#208AEF' : 'transparent' }
+                      ]}
+                      placeholder="Section Name"
                       value={activeSection.name}
+                      onFocus={() => setHeaderFocused(true)}
+                      onBlur={() => setHeaderFocused(false)}
                       onChangeText={(val) => {
                         const newSections = [...template.sections];
                         const idx = newSections.findIndex(s => s.id === activeSection.id);
@@ -320,24 +352,29 @@ export default function TemplateEditorScreen() {
                         setTemplate({ ...template, sections: newSections });
                       }}
                     />
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (window.confirm('Delete this entire section?')) {
-                          const newSections = template.sections.filter(s => s.id !== activeSection.id);
-                          setTemplate({ ...template, sections: newSections });
-                          setSelectedSectionId(newSections[0]?.id || null);
-                        }
-                      }}
-                    >
-                       <ThemedText style={{ color: 'red' }}>Delete Section</ThemedText>
-                    </TouchableOpacity>
                   </View>
+                  <TouchableOpacity
+                    style={styles.deleteSectionButton}
+                    onPress={() => {
+                      if (window.confirm('Delete this entire section?')) {
+                        const newSections = template.sections.filter(s => s.id !== activeSection.id);
+                        setTemplate({ ...template, sections: newSections });
+                        setSelectedSectionId(newSections[0]?.id || null);
+                      }
+                    }}
+                  >
+                    <ThemedText style={{ color: '#EF4444', fontSize: 12, fontWeight: '600' }}>Delete Section</ThemedText>
+                  </TouchableOpacity>
                 </View>
 
                 <DragDropContext onDragEnd={onDragEnd}>
                   <Droppable droppableId="items" type="items">
                     {(provided) => (
-                      <div {...provided.droppableProps} ref={provided.innerRef}>
+                      <div
+                        {...provided.droppableProps}
+                        ref={provided.innerRef}
+                        style={{ display: 'flex', flexDirection: 'column', gap: 24 }}
+                      >
                         {activeSection.items.map((item, iIdx) => {
                           if (selectedItemId && selectedItemId !== item.id) return null;
                           return (
@@ -381,10 +418,22 @@ export default function TemplateEditorScreen() {
                         id: generateId(),
                         sectionId: activeSection.id,
                         name: 'New Item',
+                        answerType: AnswerType.TEXT,
                         order: activeSection.items.length,
-                        comments: [],
+                        comments: [
+                          {
+                            id: generateId(),
+                            itemId: '', // Set below
+                            name: 'Description',
+                            text: '',
+                            order: 0,
+                            metadata: {}
+                          }
+                        ],
                         metadata: {}
                       };
+                      newItem.comments[0].itemId = newItem.id;
+
                       const newSections = [...template.sections];
                       const sIdx = newSections.findIndex(s => s.id === activeSection.id);
                       newSections[sIdx].items.push(newItem);
@@ -396,7 +445,7 @@ export default function TemplateEditorScreen() {
                    </TouchableOpacity>
                 )}
 
-                {selectedItemId && (
+                {!!selectedItemId && (
                    <TouchableOpacity
                     onPress={() => setSelectedItemId(null)}
                     style={styles.backButton}
@@ -431,93 +480,120 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
   },
   sidebar: {
-    width: 300,
+    width: 280,
     borderRightWidth: 1,
     borderRightColor: 'rgba(128, 128, 128, 0.1)',
-    backgroundColor: '#F9F9FB',
   },
   sidebarSearch: {
-    padding: 15,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(128, 128, 128, 0.1)',
+    borderBottomColor: 'rgba(128, 128, 128, 0.05)',
   },
   sidebarSearchInput: {
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.2)',
-    borderRadius: 6,
-    padding: 8,
+    borderColor: 'rgba(128, 128, 128, 0.15)',
+    borderRadius: 8,
+    padding: 10,
     fontSize: 14,
     color: 'inherit',
   },
-  sidebarList: {
-    flex: 1,
-  },
   sidebarSection: {
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(128, 128, 128, 0.05)',
+    position: 'relative',
+  },
+  activeIndicator: {
+    position: 'absolute',
+    left: 0,
+    top: 15,
+    bottom: 15,
+    width: 3,
+    backgroundColor: '#208AEF',
+    borderTopRightRadius: 4,
+    borderBottomRightRadius: 4,
+    opacity: 0,
+  },
+  activeIndicatorVisible: {
+    opacity: 1,
   },
   sectionItem: {
-    padding: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
   },
   sectionText: {
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '500',
   },
   sidebarItems: {
-    backgroundColor: 'rgba(0,0,0,0.02)',
     paddingBottom: 10,
   },
   itemItem: {
-    paddingVertical: 8,
-    paddingLeft: 30,
-    paddingRight: 15,
+    paddingVertical: 6,
+    paddingLeft: 40,
+    paddingRight: 20,
+    marginHorizontal: 8,
+    borderRadius: 6,
   },
   itemText: {
     fontSize: 13,
-    color: '#60646C',
   },
   activeItem: {
-    backgroundColor: '#E6F4FE',
+    backgroundColor: 'rgba(32, 138, 239, 0.08)',
   },
   activeText: {
     color: '#208AEF',
+    fontWeight: '600',
   },
   addSectionButton: {
-    padding: 15,
+    padding: 20,
+    marginTop: 'auto',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(128, 128, 128, 0.1)',
+    borderTopColor: 'rgba(128, 128, 128, 0.05)',
   },
   mainContent: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   scrollContent: {
     padding: 40,
-    maxWidth: 900,
+    maxWidth: 1000,
     width: '100%',
     alignSelf: 'center',
+    paddingBottom: 100,
   },
   activeArea: {
-    gap: 30,
+    gap: 20,
   },
   activeHeader: {
-    gap: 10,
-    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginBottom: 0,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.08)',
   },
   renameInput: {
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.1)',
-    padding: 8,
-    borderRadius: 4,
-    width: '50%',
-    color: 'inherit',
+    fontSize: 28,
+    fontWeight: '800',
+    borderWidth: 0,
+    padding: 0,
+    backgroundColor: 'transparent',
+    letterSpacing: -0.5,
+  },
+  deleteSectionButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(239, 68, 68, 0.05)',
+    marginBottom: 4,
   },
   addItemButton: {
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(128, 128, 128, 0.1)',
+    paddingVertical: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(128, 128, 128, 0.2)',
     alignItems: 'center',
+    marginTop: 20,
   },
   backButton: {
     marginTop: 20,
@@ -530,7 +606,11 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: '#208AEF',
     paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingVertical: 10,
+    borderRadius: 8,
+    shadowColor: '#208AEF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   }
 });

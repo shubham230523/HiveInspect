@@ -3,7 +3,8 @@ import { View, StyleSheet, TextInput, TouchableOpacity, Platform } from 'react-n
 import { ThemedText } from './themed-text';
 import { ItemWithComments } from '@/domain/models';
 import { AnswerType } from '@/domain/enums';
-import { Spacing } from '@/constants/theme';
+import { Spacing, Colors } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 interface ItemEditorProps {
   item: ItemWithComments;
@@ -11,7 +12,9 @@ interface ItemEditorProps {
 }
 
 export function ItemEditor({ item, onChange }: ItemEditorProps) {
+  const theme = useTheme();
   const [previewIds, setPreviewIds] = useState<Record<string, boolean>>({});
+  const [focused, setFocused] = useState(false);
 
   const togglePreview = (id: string) => {
     setPreviewIds(prev => ({ ...prev, [id]: !prev[id] }));
@@ -99,16 +102,35 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
           </View>
         );
       default:
-        return <ThemedText type="small">Type: {String(type)}</ThemedText>;
+        return (
+          <View style={styles.typeSelector}>
+            <select
+              style={StyleSheet.flatten([styles.select, { color: theme.textSecondary }]) as any}
+              value={String(type)}
+              onChange={(e) => updateItem({ answerType: e.target.value as AnswerType })}
+            >
+              {Object.values(AnswerType).map(t => (
+                <option key={t} value={t}>{t.toUpperCase()}</option>
+              ))}
+            </select>
+          </View>
+        );
     }
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.card, borderColor: theme.border }]}>
       <View style={styles.header}>
         <TextInput
-          style={styles.titleInput}
+          style={[
+            styles.titleInput,
+            { color: theme.text, borderBottomColor: focused ? '#208AEF' : 'rgba(128, 128, 128, 0.1)' }
+          ]}
           value={item.name}
+          placeholder="Item Name"
+          placeholderTextColor={theme.textSecondary}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           onChangeText={(val) => updateItem({ name: val })}
         />
         {renderAnswerTypeControl()}
@@ -125,15 +147,25 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
             </View>
 
             {previewIds[comment.id] && Platform.OS === 'web' ? (
-              <View
-                style={styles.previewBox}
-                // @ts-ignore
-                dangerouslySetInnerHTML={{ __html: comment.text }}
+              <div
+                style={StyleSheet.flatten([
+                  styles.previewBox,
+                  {
+                    color: theme.text,
+                    backgroundColor: theme.canvas,
+                    borderColor: theme.border,
+                    display: 'block',
+                    minHeight: 'auto',
+                  }
+                ]) as any}
+                dangerouslySetInnerHTML={{ __html: `<style>p { margin: 0; padding: 0; } p + p { margin-top: 8px; }</style>${comment.text.trim()}` }}
               />
             ) : (
               <TextInput
-                style={styles.textArea}
+                style={[styles.textArea, { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border }]}
                 value={comment.text}
+                placeholder="Write comment template here..."
+                placeholderTextColor={theme.textSecondary}
                 multiline
                 onChangeText={(val) => {
                   const newComments = [...item.comments];
@@ -151,24 +183,61 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
 
 const styles = StyleSheet.create({
   container: {
-    padding: Spacing.two,
-    backgroundColor: 'rgba(128, 128, 128, 0.05)',
-    borderRadius: 8,
-    marginVertical: Spacing.two,
+    padding: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    ...Platform.select({
+      web: {
+        boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+      },
+      default: {
+        elevation: 2,
+      }
+    }),
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: Spacing.two,
+    alignItems: 'center',
+    marginBottom: 24,
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
   },
   titleInput: {
     fontSize: 18,
-    fontWeight: '600',
-    color: 'inherit',
-    minWidth: 200,
+    fontWeight: '700',
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 0,
+    borderBottomWidth: 1,
+  },
+  typeSelector: {
+    backgroundColor: 'rgba(128, 128, 128, 0.05)',
+    borderRadius: 6,
+    paddingHorizontal: 8,
+  },
+  select: {
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    padding: 6,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    outlineWidth: 0,
+    cursor: 'pointer',
+    appearance: 'none',
+  },
+  typeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+  },
+  typeBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    color: 'rgba(128, 128, 128, 0.6)',
   },
   controlRow: {
     flexDirection: 'row',
@@ -177,17 +246,18 @@ const styles = StyleSheet.create({
   pill: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.3)',
+    borderColor: 'rgba(128, 128, 128, 0.2)',
   },
   activePill: {
-    backgroundColor: 'rgba(32, 138, 239, 0.1)',
+    backgroundColor: 'rgba(32, 138, 239, 0.08)',
     borderColor: '#208AEF',
   },
   optionsContainer: {
     width: '100%',
-    gap: 5,
+    gap: 8,
+    marginTop: 10,
   },
   optionRow: {
     flexDirection: 'row',
@@ -196,47 +266,47 @@ const styles = StyleSheet.create({
   },
   inputSmall: {
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.3)',
-    borderRadius: 4,
-    padding: 5,
+    borderColor: 'rgba(128, 128, 128, 0.2)',
+    borderRadius: 6,
+    padding: 8,
     fontSize: 14,
     color: 'inherit',
     flex: 1,
+    backgroundColor: 'rgba(128, 128, 128, 0.03)',
   },
   addButton: {
-    paddingVertical: 5,
+    paddingVertical: 8,
   },
   commentsList: {
-    gap: Spacing.two,
+    gap: 20,
   },
   commentHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 8,
   },
   commentItem: {
-    gap: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(128, 128, 128, 0.1)',
-    paddingBottom: 10,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.05)',
   },
   previewBox: {
-    padding: 10,
-    backgroundColor: 'white',
-    borderRadius: 4,
+    padding: 16,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.2)',
-    minHeight: 60,
+    minHeight: 80,
+    fontSize: 14,
+    lineHeight: 20,
   },
   textArea: {
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.3)',
-    borderRadius: 4,
-    padding: 10,
-    color: 'inherit',
-    backgroundColor: 'rgba(128, 128, 128, 0.05)',
-    minHeight: 60,
+    borderRadius: 8,
+    padding: 16,
+    fontSize: 14,
+    lineHeight: 20,
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   rangeContainer: {
     flexDirection: 'row',
