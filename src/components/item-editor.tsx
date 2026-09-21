@@ -148,17 +148,36 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
 
             {previewIds[comment.id] && Platform.OS === 'web' ? (
               <div
-                style={StyleSheet.flatten([
-                  styles.previewBox,
-                  {
-                    color: theme.text,
-                    backgroundColor: theme.canvas,
-                    borderColor: theme.border,
-                    display: 'block',
-                    minHeight: 'auto',
-                  }
-                ]) as any}
-                dangerouslySetInnerHTML={{ __html: `<style>p { margin: 0; padding: 0; } p + p { margin-top: 8px; }</style>${comment.text.trim()}` }}
+                style={{
+                  padding: 16,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderStyle: 'solid',
+                  minHeight: 80,
+                  fontSize: 14,
+                  lineHeight: '1.5',
+                  color: theme.text,
+                  backgroundColor: theme.canvas,
+                  borderColor: theme.border,
+                  display: 'block',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'break-word',
+                } as any}
+                dangerouslySetInnerHTML={{
+                  __html: `
+                    <style>
+                      .preview-content p { margin: 0; padding: 0; }
+                      .preview-content p + p { margin-top: 8px; }
+                      .preview-content br + br { display: none; }
+                    </style>
+                    <div class="preview-content">
+                      ${comment.text
+                        .replace(/\n\s*\n/g, '\n') // Collapse multiple newlines
+                        .replace(/(<br\s*\/?>\s*)+/gi, '<br/>') // Collapse multiple BRs
+                        .trim()}
+                    </div>
+                  `
+                }}
               />
             ) : (
               <TextInput
