@@ -15,6 +15,7 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
   const theme = useTheme();
   const [previewIds, setPreviewIds] = useState<Record<string, boolean>>({});
   const [focused, setFocused] = useState(false);
+  const [selections, setSelections] = useState<Record<string, { start: number; end: number }>>({});
 
   const togglePreview = (id: string) => {
     setPreviewIds(prev => ({ ...prev, [id]: !prev[id] }));
@@ -22,6 +23,26 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
 
   const updateItem = (updates: Partial<ItemWithComments>) => {
     onChange({ ...item, ...updates });
+  };
+
+  const insertTag = (commentIdx: number, tag: string) => {
+    const comment = item.comments[commentIdx];
+    const selection = selections[comment.id] || { start: comment.text.length, end: comment.text.length };
+
+    // Extract base tag for closing (e.g., "a href=''" -> "a")
+    const baseTag = tag.split(' ')[0];
+    const startTag = `<${tag}>`;
+    const endTag = `</${baseTag}>`;
+
+    const textBefore = comment.text.substring(0, selection.start);
+    const textSelected = comment.text.substring(selection.start, selection.end);
+    const textAfter = comment.text.substring(selection.end);
+
+    const newText = `${textBefore}${startTag}${textSelected}${endTag}${textAfter}`;
+
+    const newComments = [...item.comments];
+    newComments[commentIdx] = { ...comment, text: newText };
+    updateItem({ comments: newComments });
   };
 
   const renderAnswerTypeControl = () => {
@@ -32,14 +53,14 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
         return (
           <View style={styles.controlRow}>
             <View style={[styles.pill, styles.activePill]}>
-              <ThemedText type="smallBold">Boolean (Yes/No)</ThemedText>
+              <ThemedText type="smallBold">Boolean (Yes/No) Preview</ThemedText>
             </View>
           </View>
         );
       case AnswerType.CHECKBOX:
         return (
           <View style={styles.optionsContainer}>
-            <ThemedText type="smallBold">Options:</ThemedText>
+            <ThemedText type="smallBold">Configure Options:</ThemedText>
             {(item.options || []).map((opt, idx) => (
               <View key={idx} style={styles.optionRow}>
                 <TextInput
@@ -71,52 +92,78 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
         );
       case AnswerType.DATE:
         return (
-          <View style={styles.controlRow}>
-            <TextInput
-              style={styles.inputSmall}
-              value={item.defaultValue}
-              placeholder="YYYY-MM-DD"
-              // @ts-ignore
-              type={Platform.OS === 'web' ? 'date' : 'default'}
-              onChangeText={(val) => updateItem({ defaultValue: val })}
-            />
+          <View style={styles.configGroup}>
+             <ThemedText type="smallBold">Default Value:</ThemedText>
+             <TextInput
+                style={styles.inputSmall}
+                value={item.defaultValue}
+                placeholder="YYYY-MM-DD"
+                onChangeText={(val) => updateItem({ defaultValue: val })}
+              />
           </View>
         );
       case AnswerType.NUMBER:
         return (
-          <View style={styles.controlRow}>
-            <TextInput
-              style={styles.inputSmall}
-              value={item.defaultValue}
-              placeholder="0.00"
-              keyboardType="numeric"
-              onChangeText={(val) => updateItem({ defaultValue: val })}
-            />
+          <View style={styles.configGroup}>
+             <ThemedText type="smallBold">Default Value:</ThemedText>
+             <TextInput
+                style={styles.inputSmall}
+                value={item.defaultValue}
+                placeholder="0.00"
+                keyboardType="numeric"
+                onChangeText={(val) => updateItem({ defaultValue: val })}
+              />
           </View>
         );
       case AnswerType.RANGE:
         return (
-          <View style={styles.rangeContainer}>
-             <ThemedText type="small">Min: {item.metadata?.defaultEstimateMin || 'N/A'}</ThemedText>
-             <ThemedText type="small">Max: {item.metadata?.defaultEstimateMax || 'N/A'}</ThemedText>
+          <View style={styles.configGroup}>
+             <ThemedText type="smallBold">Range Limits (Min/Max):</ThemedText>
+             <View style={styles.optionRow}>
+               <TextInput
+                  style={styles.inputSmall}
+                  value={String(item.metadata?.defaultEstimateMin || '')}
+                  placeholder="Min"
+                  onChangeText={(val) => updateItem({ metadata: { ...item.metadata, defaultEstimateMin: val } })}
+                />
+                <TextInput
+                  style={styles.inputSmall}
+                  value={String(item.metadata?.defaultEstimateMax || '')}
+                  placeholder="Max"
+                  onChangeText={(val) => updateItem({ metadata: { ...item.metadata, defaultEstimateMax: val } })}
+                />
+             </View>
           </View>
         );
       default:
-        return (
-          <View style={styles.typeSelector}>
-            <select
-              style={StyleSheet.flatten([styles.select, { color: theme.textSecondary }]) as any}
-              value={String(type)}
-              onChange={(e) => updateItem({ answerType: e.target.value as AnswerType })}
-            >
-              {Object.values(AnswerType).map(t => (
-                <option key={t} value={t}>{t.toUpperCase()}</option>
-              ))}
-            </select>
-          </View>
-        );
+        return null;
     }
   };
+
+  const FormattingToolbar = ({ onInsert }: { onInsert: (tag: string) => void }) => (
+    <View style={styles.toolbar}>
+      <View style={styles.toolbarGroup}>
+        <TouchableOpacity style={styles.toolbarBtn} onPress={() => onInsert('b')}>
+          <ThemedText style={styles.toolbarBtnTextBold}>B</ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.toolbarBtn} onPress={() => onInsert('i')}>
+          <ThemedText style={styles.toolbarBtnTextItalic}>I</ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.toolbarBtn} onPress={() => onInsert('u')}>
+          <ThemedText style={styles.toolbarBtnTextUnderline}>U</ThemedText>
+        </TouchableOpacity>
+      </View>
+      <View style={styles.toolbarDivider} />
+      <View style={styles.toolbarGroup}>
+        <TouchableOpacity style={styles.toolbarBtn} onPress={() => onInsert('li')}>
+          <ThemedText style={styles.toolbarBtnText}>• List</ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.toolbarBtn} onPress={() => onInsert('a href=""')}>
+          <ThemedText style={styles.toolbarBtnText}>Link</ThemedText>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -133,6 +180,20 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
           onBlur={() => setFocused(false)}
           onChangeText={(val) => updateItem({ name: val })}
         />
+        <View style={styles.typeSelector}>
+          <select
+            style={StyleSheet.flatten([styles.select, { color: theme.textSecondary }]) as any}
+            value={String(item.answerType || AnswerType.TEXT)}
+            onChange={(e) => updateItem({ answerType: e.target.value as AnswerType })}
+          >
+            {Object.values(AnswerType).map(t => (
+              <option key={t} value={t}>{t.toUpperCase()}</option>
+            ))}
+          </select>
+        </View>
+      </View>
+
+      <View style={{ marginBottom: 20 }}>
         {renderAnswerTypeControl()}
       </View>
 
@@ -140,7 +201,10 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
         {item.comments.map((comment, idx) => (
           <View key={comment.id} style={styles.commentItem}>
             <View style={styles.commentHeader}>
-              <ThemedText type="smallBold">{comment.name}</ThemedText>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <ThemedText type="smallBold" style={{ color: theme.textSecondary }}>{comment.name.toUpperCase()}</ThemedText>
+                {!previewIds[comment.id] && <FormattingToolbar onInsert={(tag) => insertTag(idx, tag)} />}
+              </View>
               <TouchableOpacity onPress={() => togglePreview(comment.id)}>
                 <ThemedText type="linkPrimary">{previewIds[comment.id] ? 'Edit Source' : 'Preview HTML'}</ThemedText>
               </TouchableOpacity>
@@ -153,7 +217,7 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
                   borderRadius: 8,
                   borderWidth: 1,
                   borderStyle: 'solid',
-                  minHeight: 32, // Allow it to shrink to remove internal gaps
+                  minHeight: 32,
                   fontSize: 14,
                   lineHeight: '1.5',
                   color: theme.text,
@@ -172,7 +236,7 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
                     </style>
                     <div class="preview-content">
                       ${comment.text
-                        .replace(/<p>\s*<br\s*\/?>\s*<\/p>\s*$/gi, '') // Aggressive trailing cleanup
+                        .replace(/<p>\s*<br\s*\/?>\s*<\/p>\s*$/gi, '')
                         .replace(/<br\s*\/?>\s*$/gi, '')
                         .replace(/\n\s*\n/g, '\n')
                         .trim()}
@@ -187,6 +251,9 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
                 placeholder="Write comment template here..."
                 placeholderTextColor={theme.textSecondary}
                 multiline
+                onSelectionChange={(e) => {
+                  setSelections(prev => ({ ...prev, [comment.id]: e.nativeEvent.selection }));
+                }}
                 onChangeText={(val) => {
                   const newComments = [...item.comments];
                   newComments[idx] = { ...comment, text: val };
@@ -296,6 +363,55 @@ const styles = StyleSheet.create({
   },
   addButton: {
     paddingVertical: 8,
+  },
+  configGroup: {
+    gap: 8,
+  },
+  toolbar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: 'rgba(128, 128, 128, 0.15)',
+    borderRadius: 6,
+    padding: 2,
+  },
+  toolbarGroup: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  toolbarDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: 'rgba(128, 128, 128, 0.1)',
+    marginHorizontal: 4,
+  },
+  toolbarBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  toolbarBtnText: {
+    fontSize: 11,
+    fontWeight: '600',
+    opacity: 0.7,
+  },
+  toolbarBtnTextBold: {
+    fontSize: 12,
+    fontWeight: '800',
+    opacity: 0.8,
+  },
+  toolbarBtnTextItalic: {
+    fontSize: 12,
+    fontWeight: '600',
+    fontStyle: 'italic',
+    opacity: 0.8,
+  },
+  toolbarBtnTextUnderline: {
+    fontSize: 12,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+    opacity: 0.8,
   },
   commentsList: {
     gap: 20,
