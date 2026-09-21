@@ -7,6 +7,7 @@ import { getTemplates, deleteTemplate, saveTemplate, getTemplateHierarchy } from
 import { Template } from '@/domain/models';
 import { Spacing } from '@/constants/theme';
 import { generateId } from '@/utils/ids';
+import { importService } from '@/services/import-service';
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -14,6 +15,17 @@ export default function DashboardScreen() {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const handleImport = async () => {
+    try {
+      const result = await importService.pickAndParseFile();
+      if (result) {
+        router.push('/import');
+      }
+    } catch (e: any) {
+      if (Platform.OS === 'web') window.alert('Failed to parse template file.');
+    }
+  };
 
   const fetchTemplates = async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -36,11 +48,9 @@ export default function DashboardScreen() {
   const handleDuplicate = async (template: Template) => {
     try {
       setLoading(true);
-      // Fetch full hierarchy
       const { data: fullTemplate, error: fetchError } = await getTemplateHierarchy(template.id);
       if (fetchError || !fullTemplate) throw fetchError || new Error('Failed to fetch template for duplication');
 
-      // Generate new IDs
       const newTemplate = {
         ...fullTemplate,
         id: generateId(),
@@ -50,15 +60,15 @@ export default function DashboardScreen() {
         sections: fullTemplate.sections.map(s => ({
           ...s,
           id: generateId(),
-          templateId: '', // Fixed below
+          templateId: '',
           items: s.items.map(i => ({
             ...i,
             id: generateId(),
-            sectionId: '', // Fixed below
+            sectionId: '',
             comments: i.comments.map(c => ({
               ...c,
               id: generateId(),
-              itemId: '', // Fixed below
+              itemId: '',
             }))
           }))
         }))
@@ -127,15 +137,16 @@ export default function DashboardScreen() {
   return (
     <ThemedView style={styles.container}>
       <Stack.Screen options={{
-        title: 'Templates Dashboard',
+        title: '',
         headerRight: () => (
-          <TouchableOpacity onPress={() => router.push('/import')} style={styles.headerButton}>
+          <TouchableOpacity onPress={handleImport} style={styles.headerButton}>
             <ThemedText type="linkPrimary">+ Import</ThemedText>
           </TouchableOpacity>
         )
       }} />
 
       <View style={styles.searchContainer}>
+        <ThemedText type="title" style={styles.pageTitle}>Templates</ThemedText>
         <TextInput
           style={styles.searchInput}
           placeholder="🔍 Search templates..."
@@ -157,7 +168,7 @@ export default function DashboardScreen() {
             return (
               <View style={styles.card}>
                 <View style={styles.cardContent}>
-                  <ThemedText type="defaultSemiBold" style={styles.cardTitle}>{item.name}</ThemedText>
+                  <ThemedText type="smallBold" style={styles.cardTitle}>{item.name}</ThemedText>
                   <ThemedText type="small" style={styles.cardSubtitle}>
                     Imported {new Date(item.createdAt).toLocaleDateString()}
                   </ThemedText>
@@ -174,7 +185,7 @@ export default function DashboardScreen() {
                       <ThemedText type="link">Duplicate</ThemedText>
                     </TouchableOpacity>
                     <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.actionButton}>
-                      <ThemedText style={{ color: 'red', fontSize: 14 }}>Delete</ThemedText>
+                      <ThemedText style={{ color: '#EF4444', fontSize: 13, fontWeight: '500' }}>Delete</ThemedText>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -193,6 +204,7 @@ export default function DashboardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#F9FAFB',
   },
   center: {
     flex: 1,
@@ -201,64 +213,66 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   searchContainer: {
-    padding: Spacing.four,
-    maxWidth: 1000,
+    paddingHorizontal: Spacing.four,
+    paddingTop: Spacing.two,
+    paddingBottom: Spacing.four,
+    maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
+    gap: 15,
+  },
+  pageTitle: {
+    marginBottom: 5,
   },
   searchInput: {
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.2)',
+    borderColor: 'rgba(128, 128, 128, 0.15)',
     borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    backgroundColor: 'rgba(128, 128, 128, 0.05)',
+    padding: 10,
+    fontSize: 14,
+    backgroundColor: '#fff',
     color: 'inherit',
   },
   list: {
     paddingHorizontal: Spacing.four,
-    maxWidth: 1000,
+    maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
-    gap: 20,
+    gap: 15,
   },
   card: {
     flex: 1,
-    padding: 20,
-    margin: 10,
+    padding: 16,
+    margin: 8,
     borderRadius: 12,
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 2,
+    borderColor: '#E5E7EB',
   },
   cardContent: {
-    gap: 8,
+    gap: 4,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 16,
   },
   cardSubtitle: {
-    color: '#60646C',
+    color: '#6B7280',
   },
   cardStats: {
     color: '#208AEF',
-    marginTop: 4,
+    marginTop: 2,
+    fontSize: 12,
   },
   cardActions: {
     flexDirection: 'row',
-    marginTop: 15,
+    marginTop: 12,
     gap: 15,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(128, 128, 128, 0.05)',
-    paddingTop: 15,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 12,
   },
   actionButton: {
-    paddingVertical: 4,
+    paddingVertical: 2,
   },
   headerButton: {
     marginRight: 15,

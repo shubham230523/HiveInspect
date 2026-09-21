@@ -1,12 +1,24 @@
 import React from 'react';
-import { StyleSheet, View, ScrollView, TouchableOpacity, Image, Platform } from 'react-native';
+import { StyleSheet, View, ScrollView, TouchableOpacity, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Spacing } from '@/constants/theme';
+import { importService } from '@/services/import-service';
 
 export default function LandingPage() {
   const router = useRouter();
+
+  const handleImport = async () => {
+    try {
+      const result = await importService.pickAndParseFile();
+      if (result) {
+        router.push('/import');
+      }
+    } catch (e: any) {
+      if (Platform.OS === 'web') window.alert('Failed to parse template file.');
+    }
+  };
 
   return (
     <ThemedView style={styles.container}>
@@ -19,7 +31,7 @@ export default function LandingPage() {
           <TouchableOpacity onPress={() => router.push('/dashboard')}>
             <ThemedText type="link">Templates</ThemedText>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/import')} style={styles.primaryButtonSmall}>
+          <TouchableOpacity onPress={handleImport} style={styles.primaryButtonSmall}>
             <ThemedText style={{ color: 'white' }}>Import Template</ThemedText>
           </TouchableOpacity>
         </View>
@@ -36,11 +48,11 @@ export default function LandingPage() {
               Import your existing Spectora template, preserve the structure you've spent years building, and keep editing it in one place.
             </ThemedText>
             <View style={styles.ctaGroup}>
-              <TouchableOpacity onPress={() => router.push('/import')} style={styles.primaryButton}>
-                <ThemedText style={{ color: 'white' }}>Import Template</ThemedText>
+              <TouchableOpacity onPress={handleImport} style={styles.primaryButton}>
+                <ThemedText style={{ color: 'white', fontWeight: '700' }}>Import Template</ThemedText>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => router.push('/dashboard')} style={styles.secondaryButton}>
-                <ThemedText>View My Templates</ThemedText>
+                <ThemedText type="smallBold">View My Templates</ThemedText>
               </TouchableOpacity>
             </View>
           </View>
@@ -66,16 +78,16 @@ export default function LandingPage() {
         {/* Features Section */}
         <View style={styles.features}>
           <View style={styles.featureCard}>
-            <ThemedText type="defaultSemiBold">✓ Structure Preserved</ThemedText>
-            <ThemedText type="small">Your sections and items remain exactly as you built them.</ThemedText>
+            <ThemedText type="smallBold">✓ Structure Preserved</ThemedText>
+            <ThemedText type="small" style={{ color: '#6B7280' }}>Your sections and items remain exactly as you built them.</ThemedText>
           </View>
           <View style={styles.featureCard}>
-            <ThemedText type="defaultSemiBold">✓ Seamless Editing</ThemedText>
-            <ThemedText type="small">Intuitive tree-based navigation and structured field editing.</ThemedText>
+            <ThemedText type="smallBold">✓ Seamless Editing</ThemedText>
+            <ThemedText type="small" style={{ color: '#6B7280' }}>Intuitive tree-based navigation and structured field editing.</ThemedText>
           </View>
           <View style={styles.featureCard}>
-            <ThemedText type="defaultSemiBold">✓ Deep Copy</ThemedText>
-            <ThemedText type="small">Duplicate templates to create independent variations in seconds.</ThemedText>
+            <ThemedText type="smallBold">✓ Deep Copy</ThemedText>
+            <ThemedText type="small" style={{ color: '#6B7280' }}>Duplicate templates to create independent variations in seconds.</ThemedText>
           </View>
         </View>
 
@@ -85,18 +97,18 @@ export default function LandingPage() {
            <View style={styles.steps}>
               <View style={styles.step}>
                  <ThemedText type="subtitle" style={styles.stepNumber}>01</ThemedText>
-                 <ThemedText type="defaultSemiBold">Import</ThemedText>
-                 <ThemedText type="small">Upload your Spectora HTML-text export file.</ThemedText>
+                 <ThemedText type="smallBold">Import</ThemedText>
+                 <ThemedText type="small" style={{ color: '#6B7280' }}>Upload your Spectora HTML-text export file.</ThemedText>
               </View>
               <View style={styles.step}>
                  <ThemedText type="subtitle" style={styles.stepNumber}>02</ThemedText>
-                 <ThemedText type="defaultSemiBold">Review</ThemedText>
-                 <ThemedText type="small">Check the hierarchy and any import warnings.</ThemedText>
+                 <ThemedText type="smallBold">Review</ThemedText>
+                 <ThemedText type="small" style={{ color: '#6B7280' }}>Check the hierarchy and any import warnings.</ThemedText>
               </View>
               <View style={styles.step}>
                  <ThemedText type="subtitle" style={styles.stepNumber}>03</ThemedText>
-                 <ThemedText type="defaultSemiBold">Continue</ThemedText>
-                 <ThemedText type="small">Your template is ready to use and edit.</ThemedText>
+                 <ThemedText type="smallBold">Continue</ThemedText>
+                 <ThemedText type="small" style={{ color: '#6B7280' }}>Your template is ready to use and edit.</ThemedText>
               </View>
            </View>
         </View>
@@ -109,49 +121,51 @@ export default function LandingPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#fff',
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.four,
-    paddingVertical: Spacing.three,
+    paddingHorizontal: 40,
+    paddingVertical: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(128, 128, 128, 0.1)',
+    borderBottomColor: 'rgba(128, 128, 128, 0.05)',
   },
   logo: {
-    fontSize: 20,
+    fontSize: 18,
     color: '#208AEF',
+    letterSpacing: -0.5,
   },
   nav: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 30,
   },
   scrollContent: {
     paddingBottom: 100,
   },
   hero: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    padding: Spacing.six,
+    paddingHorizontal: 40,
+    paddingVertical: 80,
     alignItems: 'center',
-    gap: 40,
+    gap: 60,
     maxWidth: 1200,
     alignSelf: 'center',
     width: '100%',
   },
   heroText: {
     flex: 1,
-    gap: 20,
+    gap: 24,
   },
   heroTitle: {
-    fontSize: 48,
-    lineHeight: 56,
-    fontWeight: '800',
+    fontSize: 44,
+    lineHeight: 52,
   },
   heroSubtitle: {
     fontSize: 18,
-    color: '#60646C',
+    color: '#6B7280',
     lineHeight: 28,
   },
   ctaGroup: {
@@ -163,20 +177,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#208AEF',
     paddingHorizontal: 30,
     paddingVertical: 15,
-    borderRadius: 8,
+    borderRadius: 10,
   },
   primaryButtonSmall: {
     backgroundColor: '#208AEF',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
   secondaryButton: {
     paddingHorizontal: 30,
     paddingVertical: 15,
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.3)',
+    borderColor: '#E5E7EB',
   },
   previewContainer: {
     flex: 1,
@@ -185,127 +199,130 @@ const styles = StyleSheet.create({
   },
   mockEditor: {
     width: '100%',
-    aspectRatio: 1.5,
+    aspectRatio: 1.4,
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.2)',
+    borderColor: '#E5E7EB',
     flexDirection: 'row',
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 20,
-    elevation: 10,
+    elevation: 5,
   },
   mockSidebar: {
     width: '30%',
     borderRightWidth: 1,
-    borderRightColor: 'rgba(128, 128, 128, 0.1)',
-    padding: 10,
-    gap: 10,
-    backgroundColor: '#F9F9FB',
+    borderRightColor: '#F3F4F6',
+    padding: 15,
+    gap: 12,
+    backgroundColor: '#F9FAFB',
   },
   mockSidebarItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    padding: 5,
   },
   mockActive: {
     backgroundColor: '#E6F4FE',
-    borderRadius: 4,
+    borderRadius: 6,
+    padding: 5,
+    marginHorizontal: -5,
   },
   mockCircle: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#D1D5DB',
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#E5E7EB',
   },
   mockCircleActive: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#208AEF',
   },
   mockLineShort: {
-    height: 6,
-    width: '60%',
-    backgroundColor: '#D1D5DB',
-    borderRadius: 3,
+    height: 5,
+    width: '50%',
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
   },
   mockLineShortActive: {
-    height: 6,
-    width: '60%',
+    height: 5,
+    width: '50%',
     backgroundColor: '#208AEF',
-    borderRadius: 3,
+    borderRadius: 2,
   },
   mockMain: {
     flex: 1,
-    padding: 20,
-    gap: 15,
+    padding: 24,
+    gap: 20,
   },
   mockHeader: {
     marginBottom: 10,
   },
   mockLineLong: {
-    height: 10,
-    width: '40%',
-    backgroundColor: '#E5E7EB',
-    borderRadius: 5,
+    height: 8,
+    width: '30%',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 4,
   },
   mockLineMed: {
-    height: 6,
-    width: '80%',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 3,
-    marginBottom: 5,
+    height: 5,
+    width: '70%',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 2,
+    marginBottom: 4,
   },
   mockCard: {
     borderWidth: 1,
     borderColor: '#F3F4F6',
-    borderRadius: 8,
-    padding: 10,
+    borderRadius: 10,
+    padding: 12,
   },
   features: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    padding: Spacing.six,
-    gap: 20,
+    paddingHorizontal: 40,
+    paddingVertical: 60,
+    gap: 30,
     maxWidth: 1200,
     alignSelf: 'center',
     width: '100%',
   },
   featureCard: {
     flex: 1,
-    padding: 24,
-    borderRadius: 12,
+    padding: 30,
+    borderRadius: 16,
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.1)',
-    gap: 10,
+    borderColor: '#F3F4F6',
+    gap: 12,
   },
   howItWorks: {
-    padding: Spacing.six,
-    backgroundColor: '#F9F9FB',
+    paddingVertical: 80,
+    paddingHorizontal: 40,
+    backgroundColor: '#F9FAFB',
     alignItems: 'center',
   },
   sectionTitle: {
-    marginBottom: 40,
+    marginBottom: 60,
   },
   steps: {
     flexDirection: Platform.OS === 'web' ? 'row' : 'column',
-    gap: 60,
+    gap: 80,
     maxWidth: 1000,
   },
   step: {
     alignItems: 'center',
     textAlign: 'center',
-    gap: 10,
+    gap: 15,
     flex: 1,
   },
   stepNumber: {
-    fontSize: 40,
-    color: 'rgba(32, 138, 239, 0.2)',
+    fontSize: 32,
+    color: '#E5E7EB',
     fontWeight: '800',
   }
 });

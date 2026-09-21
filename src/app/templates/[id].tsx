@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
@@ -133,15 +133,15 @@ export default function TemplateEditorScreen() {
       sections: template.sections.map(s => ({
         ...s,
         id: generateId(),
-        templateId: '',
+        templateId: template.id,
         items: s.items.map(i => ({
           ...i,
           id: generateId(),
-          sectionId: '',
+          sectionId: s.id,
           comments: i.comments.map(c => ({
             ...c,
             id: generateId(),
-            itemId: '',
+            itemId: i.id,
           }))
         }))
       }))
@@ -214,26 +214,19 @@ export default function TemplateEditorScreen() {
         title: template.name,
         headerRight: () => (
           <View style={{ flexDirection: 'row', gap: 20, marginRight: 20, alignItems: 'center' }}>
-            <ThemedText type="small" style={{ color: hasUnsavedChanges ? 'orange' : 'green' }}>
-              {hasUnsavedChanges ? '● Unsaved Changes' : '✓ Saved'}
-            </ThemedText>
-            <TouchableOpacity onPress={handleDuplicate} disabled={saving}>
-              <ThemedText type="link">Duplicate</ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleSave} disabled={saving || !hasUnsavedChanges} style={[styles.saveButton, !hasUnsavedChanges && { opacity: 0.5 }]}>
-              <ThemedText style={{ color: 'white' }}>{saving ? 'Saving...' : 'Save'}</ThemedText>
-            </TouchableOpacity>
+            <ThemedText type="small" style={{ color: hasUnsavedChanges ? 'orange' : 'green' }}>{hasUnsavedChanges ? '● Unsaved Changes' : '✓ Saved'}</ThemedText>
+            <TouchableOpacity onPress={handleDuplicate} disabled={saving}><ThemedText type="link">Duplicate</ThemedText></TouchableOpacity>
+            <TouchableOpacity onPress={handleSave} disabled={saving || !hasUnsavedChanges} style={[styles.saveButton, !hasUnsavedChanges && { opacity: 0.5 }]}><ThemedText style={{ color: 'white' }}>{saving ? 'Saving...' : 'Save'}</ThemedText></TouchableOpacity>
           </View>
         )
       }} />
 
       <View style={styles.editorShell}>
-        {/* Left Sidebar */}
         <View style={styles.sidebar}>
           <View style={styles.sidebarSearch}>
             <TextInput
               style={styles.sidebarSearchInput}
-              placeholder="🔍 Search sections/items..."
+              placeholder="Search..."
               value={sidebarSearch}
               onChangeText={setSidebarSearch}
             />
@@ -262,11 +255,8 @@ export default function TemplateEditorScreen() {
                               }}
                               style={[styles.sectionItem, selectedSectionId === section.id && !selectedItemId && styles.activeItem]}
                             >
-                              <ThemedText type="defaultSemiBold" style={[styles.sectionText, selectedSectionId === section.id && styles.activeText]}>
-                                ☰ {section.name}
-                              </ThemedText>
+                              <ThemedText type="defaultSemiBold" style={[styles.sectionText, selectedSectionId === section.id && styles.activeText]}>☰ {section.name}</ThemedText>
                             </TouchableOpacity>
-
                             {(selectedSectionId === section.id || sidebarSearch) && (
                               <View style={styles.sidebarItems}>
                                 {section.items.map(item => (
@@ -278,9 +268,7 @@ export default function TemplateEditorScreen() {
                                     }}
                                     style={[styles.itemItem, selectedItemId === item.id && styles.activeItem]}
                                   >
-                                    <ThemedText type="small" style={[styles.itemText, selectedItemId === item.id && styles.activeText]}>
-                                      • {item.name}
-                                    </ThemedText>
+                                    <ThemedText type="small" style={[styles.itemText, selectedItemId === item.id && styles.activeText]}>• {item.name}</ThemedText>
                                   </TouchableOpacity>
                                 ))}
                               </View>
@@ -314,7 +302,6 @@ export default function TemplateEditorScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Main Content Area */}
         <View style={styles.mainContent}>
           <ScrollView contentContainerStyle={styles.scrollContent}>
             {activeSection ? (
@@ -405,7 +392,7 @@ export default function TemplateEditorScreen() {
                       setSelectedItemId(newItem.id);
                     }}
                    >
-                      <ThemedText type="linkPrimary">+ Add Item to {activeSection.name}</ThemedText>
+                      <ThemedText type="linkPrimary">+ Add Item</ThemedText>
                    </TouchableOpacity>
                 )}
 
@@ -414,13 +401,13 @@ export default function TemplateEditorScreen() {
                     onPress={() => setSelectedItemId(null)}
                     style={styles.backButton}
                    >
-                      <ThemedText type="link">← Back to {activeSection.name}</ThemedText>
+                      <ThemedText type="link">← Back</ThemedText>
                    </TouchableOpacity>
                 )}
               </View>
             ) : (
               <View style={styles.emptyState}>
-                <ThemedText>Select a section from the sidebar to begin editing.</ThemedText>
+                <ThemedText>Select a section to begin.</ThemedText>
               </View>
             )}
           </ScrollView>

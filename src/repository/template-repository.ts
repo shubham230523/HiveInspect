@@ -31,18 +31,34 @@ export async function getTemplates(): Promise<{ data: Template[] | null; error: 
     .from('templates')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (data) {
+    const mappedData = data.map(item => ({
+      ...item,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    }));
+    return { data: mappedData, error };
+  }
+
   return { data, error };
 }
 
 export async function getTemplateHierarchy(templateId: string): Promise<{ data: TemplateWithHierarchy | null; error: any }> {
   try {
-    const { data: template, error: templateError } = await supabase
+    const { data: templateData, error: templateError } = await supabase
       .from('templates')
       .select('*')
       .eq('id', templateId)
       .single();
 
     if (templateError) throw templateError;
+
+    const template: Template = {
+      ...templateData,
+      createdAt: templateData.created_at,
+      updatedAt: templateData.updated_at,
+    };
 
     const { data: sections, error: sectionsError } = await supabase
       .from('sections')
