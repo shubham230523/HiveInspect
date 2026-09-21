@@ -29,7 +29,6 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
     const comment = item.comments[commentIdx];
     const selection = selections[comment.id] || { start: comment.text.length, end: comment.text.length };
 
-    // Extract base tag for closing (e.g., "a href=''" -> "a")
     const baseTag = tag.split(' ')[0];
     const startTag = `<${tag}>`;
     const endTag = `</${baseTag}>`;
@@ -51,43 +50,54 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
     switch (type) {
       case AnswerType.BOOLEAN:
         return (
-          <View style={styles.controlRow}>
-            <View style={[styles.pill, styles.activePill]}>
-              <ThemedText type="smallBold">Boolean (Yes/No) Preview</ThemedText>
+          <View style={styles.configGroup}>
+            <ThemedText type="smallBold" style={{ color: theme.textSecondary, marginBottom: 4 }}>INSPECTOR VIEW (YES/NO)</ThemedText>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <View style={[styles.previewToggle, { backgroundColor: theme.primary }]}>
+                <ThemedText style={{ color: 'white', fontSize: 12, fontWeight: '700' }}>YES</ThemedText>
+              </View>
+              <View style={[styles.previewToggle, { backgroundColor: theme.backgroundElement }]}>
+                <ThemedText style={{ color: theme.textSecondary, fontSize: 12, fontWeight: '700' }}>NO</ThemedText>
+              </View>
             </View>
           </View>
         );
       case AnswerType.CHECKBOX:
         return (
-          <View style={styles.optionsContainer}>
-            <ThemedText type="smallBold">Configure Options:</ThemedText>
-            {(item.options || []).map((opt, idx) => (
-              <View key={idx} style={styles.optionRow}>
-                <TextInput
-                  style={styles.inputSmall}
-                  value={opt}
-                  onChangeText={(val) => {
-                    const newOpts = [...(item.options || [])];
-                    newOpts[idx] = val;
-                    updateItem({ options: newOpts });
-                  }}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    const newOpts = (item.options || []).filter((_, i) => i !== idx);
-                    updateItem({ options: newOpts });
-                  }}
-                >
-                  <ThemedText style={{ color: 'red' }}>✕</ThemedText>
-                </TouchableOpacity>
-              </View>
-            ))}
-            <TouchableOpacity
-              style={styles.addButton}
-              onPress={() => updateItem({ options: [...(item.options || []), 'New Option'] })}
-            >
-              <ThemedText type="linkPrimary">+ Add Option</ThemedText>
-            </TouchableOpacity>
+          <View style={styles.configGroup}>
+            <ThemedText type="smallBold" style={{ color: theme.textSecondary, marginBottom: 8 }}>INSPECTOR CHECKLIST OPTIONS</ThemedText>
+            <View style={{ gap: 8 }}>
+              {(item.options || []).map((opt, idx) => (
+                <View key={idx} style={styles.optionRow}>
+                  <View style={{ width: 16, height: 16, borderRadius: 4, borderWidth: 2, borderColor: theme.border }} />
+                  <TextInput
+                    style={[styles.inputSmall, { flex: 1 }]}
+                    value={opt || ''}
+                    placeholder="Option Label"
+                    onChangeText={(val) => {
+                      const newOpts = [...(item.options || [])];
+                      newOpts[idx] = val;
+                      updateItem({ options: newOpts });
+                    }}
+                  />
+                  <TouchableOpacity
+                    onPress={() => {
+                      const newOpts = (item.options || []).filter((_, i) => i !== idx);
+                      updateItem({ options: newOpts });
+                    }}
+                    style={{ padding: 4 }}
+                  >
+                    <ThemedText style={{ color: '#EF4444', fontWeight: '800' }}>✕</ThemedText>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              <TouchableOpacity
+                style={styles.addButton}
+                onPress={() => updateItem({ options: [...(item.options || []), 'New Option'] })}
+              >
+                <ThemedText type="linkPrimary" style={{ fontSize: 13 }}>+ Add Checkbox Option</ThemedText>
+              </TouchableOpacity>
+            </View>
           </View>
         );
       case AnswerType.DATE:
@@ -96,7 +106,7 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
              <ThemedText type="smallBold">Default Value:</ThemedText>
              <TextInput
                 style={styles.inputSmall}
-                value={item.defaultValue}
+                value={item.defaultValue || ''}
                 placeholder="YYYY-MM-DD"
                 onChangeText={(val) => updateItem({ defaultValue: val })}
               />
@@ -108,7 +118,7 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
              <ThemedText type="smallBold">Default Value:</ThemedText>
              <TextInput
                 style={styles.inputSmall}
-                value={item.defaultValue}
+                value={item.defaultValue || ''}
                 placeholder="0.00"
                 keyboardType="numeric"
                 onChangeText={(val) => updateItem({ defaultValue: val })}
@@ -122,13 +132,13 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
              <View style={styles.optionRow}>
                <TextInput
                   style={styles.inputSmall}
-                  value={String(item.metadata?.defaultEstimateMin || '')}
+                  value={String(item.metadata?.defaultEstimateMin ?? '')}
                   placeholder="Min"
                   onChangeText={(val) => updateItem({ metadata: { ...item.metadata, defaultEstimateMin: val } })}
                 />
                 <TextInput
                   style={styles.inputSmall}
-                  value={String(item.metadata?.defaultEstimateMax || '')}
+                  value={String(item.metadata?.defaultEstimateMax ?? '')}
                   placeholder="Max"
                   onChangeText={(val) => updateItem({ metadata: { ...item.metadata, defaultEstimateMax: val } })}
                 />
@@ -173,7 +183,7 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
             styles.titleInput,
             { color: theme.text, borderBottomColor: focused ? '#208AEF' : 'rgba(128, 128, 128, 0.1)' }
           ]}
-          value={item.name}
+          value={item.name || ''}
           placeholder="Item Name"
           placeholderTextColor={theme.textSecondary}
           onFocus={() => setFocused(true)}
@@ -247,7 +257,7 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
             ) : (
               <TextInput
                 style={[styles.textArea, { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border }]}
-                value={comment.text}
+                value={comment.text || ''}
                 placeholder="Write comment template here..."
                 placeholderTextColor={theme.textSecondary}
                 multiline
@@ -366,6 +376,20 @@ const styles = StyleSheet.create({
   },
   configGroup: {
     gap: 8,
+    padding: 16,
+    backgroundColor: 'rgba(128, 128, 128, 0.03)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: 'rgba(128, 128, 128, 0.1)',
+  },
+  previewToggle: {
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 80,
   },
   toolbar: {
     flexDirection: 'row',
