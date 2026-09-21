@@ -93,6 +93,16 @@ export async function importSpectoraXls(
       });
     });
 
+    // Store counts in template metadata for fast display in dashboard
+    template.metadata = {
+      ...template.metadata,
+      stats: {
+        sections: template.sections.length,
+        items: itemsCreated,
+        comments: commentsCreated,
+      }
+    };
+
     return {
       success: true,
       template,

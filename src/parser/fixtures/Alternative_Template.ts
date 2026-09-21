@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx';
-import { SPECTORA_COLUMNS } from '../../constants';
+import { SPECTORA_COLUMNS } from '../constants';
 
 export function createAlternativeTemplate(): Buffer {
   const data = [

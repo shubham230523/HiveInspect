@@ -1,4 +1,4 @@
-import { createAlternativeTemplate } from './fixtures/Alternative_Template';
+import { createAlternativeTemplate } from '../fixtures/Alternative_Template';
 import { importSpectoraXls } from '../importer';
 
 describe('Alternative Template Robustness', () => {

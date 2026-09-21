@@ -75,10 +75,10 @@ export default function ImportScreen() {
       // Success
       if (Platform.OS === 'web') {
         window.alert('Template imported successfully');
-        router.replace('/');
+        router.replace('/dashboard');
       } else {
         Alert.alert('Success', 'Template imported successfully', [
-          { text: 'OK', onPress: () => router.replace('/') }
+          { text: 'OK', onPress: () => router.replace('/dashboard') }
         ]);
       }
     }
@@ -102,63 +102,68 @@ export default function ImportScreen() {
           </View>
         ) : (
           <View style={styles.previewContainer}>
-            <ThemedText type="title">Import Preview</ThemedText>
-            <ThemedText type="defaultSemiBold">File: {fileName}</ThemedText>
-
-            <View style={styles.statsCard}>
-              <ThemedText type="defaultSemiBold">Import Statistics:</ThemedText>
-              <ThemedText>• Rows Processed: {result.rowsProcessed}</ThemedText>
-              <ThemedText>• Sections: {result.sectionsCreated}</ThemedText>
-              <ThemedText>• Items: {result.itemsCreated}</ThemedText>
-              <ThemedText>• Comments: {result.commentsCreated}</ThemedText>
+            <View style={styles.importHeader}>
+               <ThemedText type="title">Import Review</ThemedText>
+               <ThemedText type="defaultSemiBold">File: {fileName}</ThemedText>
             </View>
 
-            {result.preservationStats && (
-              <View style={[styles.statsCard, { borderColor: 'green' }]}>
-                <ThemedText type="defaultSemiBold">Preservation Check:</ThemedText>
-                <View style={styles.row}>
-                   <View style={{ flex: 1 }}>
-                     <ThemedText type="smallBold">SOURCE</ThemedText>
-                     <ThemedText type="small">Sections: {result.preservationStats.source.sections}</ThemedText>
-                     <ThemedText type="small">Items: {result.preservationStats.source.items}</ThemedText>
-                     <ThemedText type="small">Comments: {result.preservationStats.source.comments}</ThemedText>
-                   </View>
-                   <View style={{ flex: 1 }}>
-                     <ThemedText type="smallBold">IMPORTED</ThemedText>
-                     <ThemedText type="small">Sections: {result.preservationStats.imported.sections}</ThemedText>
-                     <ThemedText type="small">Items: {result.preservationStats.imported.items}</ThemedText>
-                     <ThemedText type="small">Comments: {result.preservationStats.imported.comments}</ThemedText>
-                   </View>
-                </View>
-                {result.preservationStats.source.comments === result.preservationStats.imported.comments ? (
-                  <ThemedText type="small" style={{ color: 'green', marginTop: 5 }}>✓ 100% of rows preserved</ThemedText>
-                ) : (
-                  <ThemedText type="small" style={{ color: 'orange', marginTop: 5 }}>⚠ Some rows filtered or grouped</ThemedText>
-                )}
+            <View style={styles.grid}>
+              <View style={styles.statsCard}>
+                <ThemedText type="defaultSemiBold">Import Summary</ThemedText>
+                <View style={styles.statRow}><ThemedText type="small">Rows</ThemedText><ThemedText type="smallBold">{result.rowsProcessed}</ThemedText></View>
+                <View style={styles.statRow}><ThemedText type="small">Sections</ThemedText><ThemedText type="smallBold">{result.sectionsCreated}</ThemedText></View>
+                <View style={styles.statRow}><ThemedText type="small">Items</ThemedText><ThemedText type="smallBold">{result.itemsCreated}</ThemedText></View>
+                <View style={styles.statRow}><ThemedText type="small">Comments</ThemedText><ThemedText type="smallBold">{result.commentsCreated}</ThemedText></View>
               </View>
-            )}
+
+              {result.preservationStats && (
+                <View style={[styles.statsCard, { borderColor: '#10B981' }]}>
+                  <ThemedText type="defaultSemiBold" style={{ color: '#059669' }}>✓ Preservation Health</ThemedText>
+                  <ThemedText type="small">Comparing source export to imported structure.</ThemedText>
+                  <View style={styles.row}>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText type="smallBold">SOURCE</ThemedText>
+                      <ThemedText type="small">{result.preservationStats.source.sections} Sections</ThemedText>
+                      <ThemedText type="small">{result.preservationStats.source.items} Items</ThemedText>
+                      <ThemedText type="small">{result.preservationStats.source.comments} Comments</ThemedText>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <ThemedText type="smallBold">IMPORTED</ThemedText>
+                      <ThemedText type="small">{result.preservationStats.imported.sections} Sections</ThemedText>
+                      <ThemedText type="small">{result.preservationStats.imported.items} Items</ThemedText>
+                      <ThemedText type="small">{result.preservationStats.imported.comments} Comments</ThemedText>
+                    </View>
+                  </View>
+                  {result.preservationStats.source.comments === result.preservationStats.imported.comments ? (
+                    <ThemedText type="small" style={{ color: 'green', marginTop: 5 }}>✓ 100% of rows preserved</ThemedText>
+                  ) : (
+                    <ThemedText type="small" style={{ color: 'orange', marginTop: 5 }}>⚠ Some rows filtered or grouped</ThemedText>
+                  )}
+                </View>
+              )}
+            </View>
 
             {result.fieldCoverage && (
               <View style={styles.statsCard}>
-                <ThemedText type="defaultSemiBold">Field Fidelity:</ThemedText>
-                <ThemedText type="small" style={{ color: 'green' }}>✓ {result.fieldCoverage.supported.length} Fields Supported</ThemedText>
-                <ThemedText type="small" style={{ color: '#208AEF' }}>ℹ {result.fieldCoverage.metadata.length} Fields Preserved as Metadata</ThemedText>
-
-                {result.fieldCoverage.unsupported.length > 0 && (
-                  <View style={{ marginTop: 10 }}>
-                    <ThemedText type="smallBold" style={{ color: 'orange' }}>Unsupported populated data detected in:</ThemedText>
-                    {result.fieldCoverage.unsupported.map((f, i) => (
-                      <ThemedText key={i} type="small">• {f}</ThemedText>
-                    ))}
-                  </View>
-                )}
-
-                {result.fieldCoverage.missing.length > 0 && (
-                  <View style={{ marginTop: 10 }}>
-                    <ThemedText type="smallBold" style={{ color: 'gray' }}>Fields not present in source:</ThemedText>
-                    <ThemedText type="small">• {result.fieldCoverage.missing.length} fields</ThemedText>
-                  </View>
-                )}
+                <ThemedText type="defaultSemiBold">Field Fidelity Report</ThemedText>
+                <View style={styles.coverageGrid}>
+                   <View style={styles.coverageItem}>
+                      <ThemedText style={{ color: 'green', fontWeight: '700' }}>{result.fieldCoverage.supported.length}</ThemedText>
+                      <ThemedText type="small">Supported</ThemedText>
+                   </View>
+                   <View style={styles.coverageItem}>
+                      <ThemedText style={{ color: '#208AEF', fontWeight: '700' }}>{result.fieldCoverage.metadata.length}</ThemedText>
+                      <ThemedText type="small">Metadata</ThemedText>
+                   </View>
+                   <View style={styles.coverageItem}>
+                      <ThemedText style={{ color: 'orange', fontWeight: '700' }}>{result.fieldCoverage.unsupported.length}</ThemedText>
+                      <ThemedText type="small">Unsupported</ThemedText>
+                   </View>
+                   <View style={styles.coverageItem}>
+                      <ThemedText style={{ color: 'gray', fontWeight: '700' }}>{result.fieldCoverage.missing.length}</ThemedText>
+                      <ThemedText type="small">Missing</ThemedText>
+                   </View>
+                </View>
               </View>
             )}
 
@@ -243,6 +248,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 8,
+  },
+  importHeader: {
+    marginBottom: 10,
+    gap: 5,
+  },
+  grid: {
+    flexDirection: 'row',
+    gap: 20,
+    flexWrap: 'wrap',
+  },
+  statRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 5,
+  },
+  coverageGrid: {
+    flexDirection: 'row',
+    gap: 15,
+    marginTop: 10,
+  },
+  coverageItem: {
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    minWidth: 80,
   },
   row: {
     flexDirection: 'row',

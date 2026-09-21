@@ -1,22 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { StyleSheet, View, ScrollView, TouchableOpacity, TextInput, ActivityIndicator, Alert, Platform } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { getTemplateHierarchy, saveTemplate } from '@/repository/template-repository';
-import { TemplateWithHierarchy } from '@/domain/models';
+import { TemplateWithHierarchy, SectionWithItems, ItemWithComments } from '@/domain/models';
 import { Spacing } from '@/constants/theme';
 import { generateId } from '@/utils/ids';
 import { ItemEditor } from '@/components/item-editor';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
 export default function TemplateEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const navigation = useNavigation();
+
   const [template, setTemplate] = useState<TemplateWithHierarchy | null>(null);
   const [initialTemplate, setInitialTemplate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Editor State
+  const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);
+  const [sidebarSearch, setSidebarSearch] = useState('');
 
   useEffect(() => {
     const fetchTemplate = async () => {
@@ -24,10 +31,14 @@ export default function TemplateEditorScreen() {
       setLoading(true);
       const { data, error } = await getTemplateHierarchy(id);
       if (error) {
-        Alert.alert('Error', 'Failed to load template');
-      } else {
+        if (Platform.OS === 'web') window.alert('Failed to load template');
+        else Alert.alert('Error', 'Failed to load template');
+      } else if (data) {
         setTemplate(data);
         setInitialTemplate(JSON.stringify(data));
+        if (data.sections.length > 0) {
+          setSelectedSectionId(data.sections[0].id);
+        }
       }
       setLoading(false);
     };
@@ -39,26 +50,15 @@ export default function TemplateEditorScreen() {
   useEffect(() => {
     const handleBeforeRemove = (e: any) => {
       if (!hasUnsavedChanges) return;
-
       e.preventDefault();
-
+      const msg = 'You have unsaved changes. Are you sure you want to leave?';
       if (Platform.OS === 'web') {
-        if (window.confirm('You have unsaved changes. Are you sure you want to leave?')) {
-          navigation.dispatch(e.data.action);
-        }
+        if (window.confirm(msg)) navigation.dispatch(e.data.action);
       } else {
-        Alert.alert(
-          'Unsaved Changes',
-          'You have unsaved changes. Are you sure you want to leave?',
-          [
-            { text: 'Stay', style: 'cancel' },
-            {
-              text: 'Leave',
-              style: 'destructive',
-              onPress: () => navigation.dispatch(e.data.action),
-            },
-          ]
-        );
+        Alert.alert('Unsaved Changes', msg, [
+          { text: 'Stay', style: 'cancel' },
+          { text: 'Leave', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+        ]);
       }
     };
 
@@ -70,17 +70,38 @@ export default function TemplateEditorScreen() {
     };
 
     navigation.addListener('beforeRemove', handleBeforeRemove);
-    if (Platform.OS === 'web') {
-      window.addEventListener('beforeunload', beforeUnload);
-    }
+    if (Platform.OS === 'web') window.addEventListener('beforeunload', beforeUnload);
 
     return () => {
       navigation.removeListener('beforeRemove', handleBeforeRemove);
-      if (Platform.OS === 'web') {
-        window.removeEventListener('beforeunload', beforeUnload);
-      }
+      if (Platform.OS === 'web') window.removeEventListener('beforeunload', beforeUnload);
     };
   }, [hasUnsavedChanges, navigation]);
+
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination || !template) return;
+
+    if (result.type === 'sections') {
+      const newSections = Array.from(template.sections);
+      const [reorderedSection] = newSections.splice(result.source.index, 1);
+      newSections.splice(result.destination.index, 0, reorderedSection);
+
+      const updatedSections = newSections.map((s, idx) => ({ ...s, order: idx }));
+      setTemplate({ ...template, sections: updatedSections });
+    } else if (result.type === 'items') {
+      const sIdx = template.sections.findIndex(s => s.id === selectedSectionId);
+      if (sIdx === -1) return;
+
+      const newItems = Array.from(template.sections[sIdx].items);
+      const [reorderedItem] = newItems.splice(result.source.index, 1);
+      newItems.splice(result.destination.index, 0, reorderedItem);
+
+      const updatedItems = newItems.map((i, idx) => ({ ...i, order: idx }));
+      const newSections = [...template.sections];
+      newSections[sIdx] = { ...newSections[sIdx], items: updatedItems };
+      setTemplate({ ...template, sections: newSections });
+    }
+  };
 
   const handleSave = async () => {
     if (!template || saving) return;
@@ -90,18 +111,12 @@ export default function TemplateEditorScreen() {
 
     if (error) {
       const msg = error.message || 'Failed to save changes';
-      if (Platform.OS === 'web') {
-        window.alert(`Error: ${msg}`);
-      } else {
-        Alert.alert('Error', msg);
-      }
+      if (Platform.OS === 'web') window.alert(`Error: ${msg}`);
+      else Alert.alert('Error', msg);
     } else {
       setInitialTemplate(JSON.stringify(template));
-      if (Platform.OS === 'web') {
-        window.alert('Changes saved successfully');
-      } else {
-        Alert.alert('Success', 'Changes saved successfully');
-      }
+      if (Platform.OS === 'web') window.alert('Changes saved successfully');
+      else Alert.alert('Success', 'Changes saved successfully');
     }
   };
 
@@ -109,7 +124,6 @@ export default function TemplateEditorScreen() {
     if (!template) return;
     setSaving(true);
 
-    // Independent duplication: generate all new IDs
     const newTemplate: TemplateWithHierarchy = {
       ...template,
       id: generateId(),
@@ -119,20 +133,20 @@ export default function TemplateEditorScreen() {
       sections: template.sections.map(s => ({
         ...s,
         id: generateId(),
-        templateId: '', // Will be set by save
+        templateId: '',
         items: s.items.map(i => ({
           ...i,
           id: generateId(),
-          sectionId: '', // Will be set by save
+          sectionId: '',
           comments: i.comments.map(c => ({
             ...c,
             id: generateId(),
-            itemId: '', // Will be set by save
+            itemId: '',
           }))
         }))
       }))
     };
-    // Fix IDs
+
     newTemplate.sections.forEach(s => {
       s.templateId = newTemplate.id;
       s.items.forEach(i => {
@@ -146,11 +160,8 @@ export default function TemplateEditorScreen() {
 
     if (error) {
       const msg = error.message || 'Failed to duplicate template';
-      if (Platform.OS === 'web') {
-        window.alert(`Error: ${msg}`);
-      } else {
-        Alert.alert('Error', msg);
-      }
+      if (Platform.OS === 'web') window.alert(`Error: ${msg}`);
+      else Alert.alert('Error', msg);
     } else {
       if (Platform.OS === 'web') {
         window.alert('Template duplicated successfully');
@@ -163,10 +174,25 @@ export default function TemplateEditorScreen() {
     }
   };
 
+  const filteredSections = useMemo(() => {
+    if (!template) return [];
+    if (!sidebarSearch) return template.sections;
+
+    const search = sidebarSearch.toLowerCase();
+    return template.sections.filter(s => {
+      const sectionMatch = s.name.toLowerCase().includes(search);
+      const itemsMatch = s.items.some(i => i.name.toLowerCase().includes(search));
+      return sectionMatch || itemsMatch;
+    });
+  }, [template, sidebarSearch]);
+
+  const activeSection = template?.sections.find(s => s.id === selectedSectionId);
+
   if (loading) {
     return (
       <ThemedView style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color="#208AEF" />
+        <ThemedText style={{ marginTop: 20 }}>Loading Template...</ThemedText>
       </ThemedView>
     );
   }
@@ -175,6 +201,9 @@ export default function TemplateEditorScreen() {
     return (
       <ThemedView style={styles.center}>
         <ThemedText>Template not found</ThemedText>
+        <TouchableOpacity onPress={() => router.replace('/dashboard')} style={{ marginTop: 20 }}>
+          <ThemedText type="linkPrimary">Back to Dashboard</ThemedText>
+        </TouchableOpacity>
       </ThemedView>
     );
   }
@@ -184,56 +213,219 @@ export default function TemplateEditorScreen() {
       <Stack.Screen options={{
         title: template.name,
         headerRight: () => (
-          <View style={{ flexDirection: 'row', gap: 10, marginRight: 10 }}>
+          <View style={{ flexDirection: 'row', gap: 20, marginRight: 20, alignItems: 'center' }}>
+            <ThemedText type="small" style={{ color: hasUnsavedChanges ? 'orange' : 'green' }}>
+              {hasUnsavedChanges ? '● Unsaved Changes' : '✓ Saved'}
+            </ThemedText>
             <TouchableOpacity onPress={handleDuplicate} disabled={saving}>
-              <ThemedText type="linkPrimary">Duplicate</ThemedText>
+              <ThemedText type="link">Duplicate</ThemedText>
             </TouchableOpacity>
-            <TouchableOpacity onPress={handleSave} disabled={saving}>
-              <ThemedText type="linkPrimary">Save</ThemedText>
+            <TouchableOpacity onPress={handleSave} disabled={saving || !hasUnsavedChanges} style={[styles.saveButton, !hasUnsavedChanges && { opacity: 0.5 }]}>
+              <ThemedText style={{ color: 'white' }}>{saving ? 'Saving...' : 'Save'}</ThemedText>
             </TouchableOpacity>
           </View>
         )
       }} />
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.field}>
-          <ThemedText type="smallBold">Template Name</ThemedText>
-          <TextInput
-            style={styles.input}
-            value={template.name}
-            onChangeText={(val) => setTemplate({...template, name: val})}
-          />
+      <View style={styles.editorShell}>
+        {/* Left Sidebar */}
+        <View style={styles.sidebar}>
+          <View style={styles.sidebarSearch}>
+            <TextInput
+              style={styles.sidebarSearchInput}
+              placeholder="🔍 Search sections/items..."
+              value={sidebarSearch}
+              onChangeText={setSidebarSearch}
+            />
+          </View>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="sections" type="sections">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef} style={{ flex: 1, overflowY: 'auto' }}>
+                  {filteredSections.map((section, index) => (
+                    <Draggable key={section.id} draggableId={section.id} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          style={{
+                            ...provided.draggableProps.style,
+                            backgroundColor: snapshot.isDragging ? '#f0f0f0' : 'transparent'
+                          }}
+                        >
+                          <View style={styles.sidebarSection}>
+                            <TouchableOpacity
+                              onPress={() => {
+                                setSelectedSectionId(section.id);
+                                setSelectedItemId(null);
+                              }}
+                              style={[styles.sectionItem, selectedSectionId === section.id && !selectedItemId && styles.activeItem]}
+                            >
+                              <ThemedText type="defaultSemiBold" style={[styles.sectionText, selectedSectionId === section.id && styles.activeText]}>
+                                ☰ {section.name}
+                              </ThemedText>
+                            </TouchableOpacity>
+
+                            {(selectedSectionId === section.id || sidebarSearch) && (
+                              <View style={styles.sidebarItems}>
+                                {section.items.map(item => (
+                                  <TouchableOpacity
+                                    key={item.id}
+                                    onPress={() => {
+                                      setSelectedSectionId(section.id);
+                                      setSelectedItemId(item.id);
+                                    }}
+                                    style={[styles.itemItem, selectedItemId === item.id && styles.activeItem]}
+                                  >
+                                    <ThemedText type="small" style={[styles.itemText, selectedItemId === item.id && styles.activeText]}>
+                                      • {item.name}
+                                    </ThemedText>
+                                  </TouchableOpacity>
+                                ))}
+                              </View>
+                            )}
+                          </View>
+                        </div>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
+          <TouchableOpacity
+            style={styles.addSectionButton}
+            onPress={() => {
+              const newSection: SectionWithItems = {
+                id: generateId(),
+                templateId: template.id,
+                name: 'New Section',
+                order: template.sections.length,
+                items: [],
+                metadata: {}
+              };
+              setTemplate({ ...template, sections: [...template.sections, newSection] });
+              setSelectedSectionId(newSection.id);
+            }}
+          >
+             <ThemedText type="linkPrimary">+ Add Section</ThemedText>
+          </TouchableOpacity>
         </View>
 
-        {template.sections.map((section, sIdx) => (
-          <View key={section.id} style={styles.sectionContainer}>
-            <View style={styles.sectionHeader}>
-              <ThemedText type="subtitle">Section: {section.name}</ThemedText>
-              <TextInput
-                style={styles.inputSmall}
-                value={section.name}
-                onChangeText={(val) => {
-                  const newSections = [...template.sections];
-                  newSections[sIdx].name = val;
-                  setTemplate({...template, sections: newSections});
-                }}
-              />
-            </View>
+        {/* Main Content Area */}
+        <View style={styles.mainContent}>
+          <ScrollView contentContainerStyle={styles.scrollContent}>
+            {activeSection ? (
+              <View style={styles.activeArea}>
+                <View style={styles.activeHeader}>
+                  <ThemedText type="subtitle">{activeSection.name}</ThemedText>
+                  <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                    <TextInput
+                      style={styles.renameInput}
+                      placeholder="Rename Section"
+                      value={activeSection.name}
+                      onChangeText={(val) => {
+                        const newSections = [...template.sections];
+                        const idx = newSections.findIndex(s => s.id === activeSection.id);
+                        newSections[idx].name = val;
+                        setTemplate({ ...template, sections: newSections });
+                      }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (window.confirm('Delete this entire section?')) {
+                          const newSections = template.sections.filter(s => s.id !== activeSection.id);
+                          setTemplate({ ...template, sections: newSections });
+                          setSelectedSectionId(newSections[0]?.id || null);
+                        }
+                      }}
+                    >
+                       <ThemedText style={{ color: 'red' }}>Delete Section</ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-            {section.items.map((item, iIdx) => (
-              <ItemEditor
-                key={item.id}
-                item={item}
-                onChange={(updatedItem) => {
-                  const newSections = [...template.sections];
-                  newSections[sIdx].items[iIdx] = updatedItem;
-                  setTemplate({ ...template, sections: newSections });
-                }}
-              />
-            ))}
-          </View>
-        ))}
-      </ScrollView>
+                <DragDropContext onDragEnd={onDragEnd}>
+                  <Droppable droppableId="items" type="items">
+                    {(provided) => (
+                      <div {...provided.droppableProps} ref={provided.innerRef}>
+                        {activeSection.items.map((item, iIdx) => {
+                          if (selectedItemId && selectedItemId !== item.id) return null;
+                          return (
+                            <Draggable key={item.id} draggableId={item.id} index={iIdx} isDragDisabled={!!selectedItemId}>
+                              {(provided, snapshot) => (
+                                <div
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  {...provided.dragHandleProps}
+                                  style={{
+                                    ...provided.draggableProps.style,
+                                    backgroundColor: snapshot.isDragging ? '#f9f9f9' : 'transparent',
+                                    marginBottom: snapshot.isDragging ? 20 : 0
+                                  }}
+                                >
+                                  <ItemEditor
+                                    item={item}
+                                    onChange={(updatedItem) => {
+                                      const newSections = [...template.sections];
+                                      const sIdx = newSections.findIndex(s => s.id === activeSection.id);
+                                      newSections[sIdx].items[iIdx] = updatedItem;
+                                      setTemplate({ ...template, sections: newSections });
+                                    }}
+                                  />
+                                </div>
+                              )}
+                            </Draggable>
+                          );
+                        })}
+                        {provided.placeholder}
+                      </div>
+                    )}
+                  </Droppable>
+                </DragDropContext>
+
+                {!selectedItemId && (
+                   <TouchableOpacity
+                    style={styles.addItemButton}
+                    onPress={() => {
+                      const newItem: ItemWithComments = {
+                        id: generateId(),
+                        sectionId: activeSection.id,
+                        name: 'New Item',
+                        order: activeSection.items.length,
+                        comments: [],
+                        metadata: {}
+                      };
+                      const newSections = [...template.sections];
+                      const sIdx = newSections.findIndex(s => s.id === activeSection.id);
+                      newSections[sIdx].items.push(newItem);
+                      setTemplate({ ...template, sections: newSections });
+                      setSelectedItemId(newItem.id);
+                    }}
+                   >
+                      <ThemedText type="linkPrimary">+ Add Item to {activeSection.name}</ThemedText>
+                   </TouchableOpacity>
+                )}
+
+                {selectedItemId && (
+                   <TouchableOpacity
+                    onPress={() => setSelectedItemId(null)}
+                    style={styles.backButton}
+                   >
+                      <ThemedText type="link">← Back to {activeSection.name}</ThemedText>
+                   </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <ThemedText>Select a section from the sidebar to begin editing.</ThemedText>
+              </View>
+            )}
+          </ScrollView>
+        </View>
+      </View>
     </ThemedView>
   );
 }
@@ -247,48 +439,111 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  scrollContent: {
-    padding: Spacing.four,
-    gap: 20,
+  editorShell: {
+    flex: 1,
+    flexDirection: 'row',
   },
-  field: {
-    gap: 5,
+  sidebar: {
+    width: 300,
+    borderRightWidth: 1,
+    borderRightColor: 'rgba(128, 128, 128, 0.1)',
+    backgroundColor: '#F9F9FB',
   },
-  input: {
+  sidebarSearch: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.1)',
+  },
+  sidebarSearchInput: {
+    backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.3)',
-    borderRadius: 4,
-    padding: 10,
-    color: 'inherit',
-    backgroundColor: 'rgba(128, 128, 128, 0.05)',
-  },
-  inputSmall: {
-    borderWidth: 1,
-    borderColor: 'rgba(128, 128, 128, 0.3)',
-    borderRadius: 4,
-    padding: 5,
+    borderColor: 'rgba(128, 128, 128, 0.2)',
+    borderRadius: 6,
+    padding: 8,
     fontSize: 14,
     color: 'inherit',
-    width: 200,
   },
-  sectionContainer: {
+  sidebarList: {
+    flex: 1,
+  },
+  sidebarSection: {
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(128, 128, 128, 0.05)',
+  },
+  sectionItem: {
     padding: 15,
-    borderRadius: 8,
-    backgroundColor: 'rgba(128, 128, 128, 0.05)',
-    gap: 15,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  sectionText: {
+    fontSize: 15,
+  },
+  sidebarItems: {
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    paddingBottom: 10,
+  },
+  itemItem: {
+    paddingVertical: 8,
+    paddingLeft: 30,
+    paddingRight: 15,
+  },
+  itemText: {
+    fontSize: 13,
+    color: '#60646C',
+  },
+  activeItem: {
+    backgroundColor: '#E6F4FE',
+  },
+  activeText: {
+    color: '#208AEF',
+  },
+  addSectionButton: {
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.1)',
+  },
+  mainContent: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  scrollContent: {
+    padding: 40,
+    maxWidth: 900,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  activeArea: {
+    gap: 30,
+  },
+  activeHeader: {
+    gap: 10,
+    marginBottom: 10,
+  },
+  renameInput: {
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(128, 128, 128, 0.1)',
+    padding: 8,
+    borderRadius: 4,
+    width: '50%',
+    color: 'inherit',
+  },
+  addItemButton: {
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(128, 128, 128, 0.1)',
     alignItems: 'center',
   },
-  itemContainer: {
-    paddingLeft: 15,
-    borderLeftWidth: 2,
-    borderLeftColor: '#208AEF',
-    gap: 10,
+  backButton: {
+    marginTop: 20,
   },
-  commentContainer: {
-    gap: 5,
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    paddingTop: 100,
   },
+  saveButton: {
+    backgroundColor: '#208AEF',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 6,
+  }
 });
