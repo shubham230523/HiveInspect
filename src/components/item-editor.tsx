@@ -153,7 +153,7 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
                   borderRadius: 8,
                   borderWidth: 1,
                   borderStyle: 'solid',
-                  minHeight: 80,
+                  minHeight: 32, // Allow it to shrink to remove internal gaps
                   fontSize: 14,
                   lineHeight: '1.5',
                   color: theme.text,
@@ -172,8 +172,9 @@ export function ItemEditor({ item, onChange }: ItemEditorProps) {
                     </style>
                     <div class="preview-content">
                       ${comment.text
-                        .replace(/\n\s*\n/g, '\n') // Collapse multiple newlines
-                        .replace(/(<br\s*\/?>\s*)+/gi, '<br/>') // Collapse multiple BRs
+                        .replace(/<p>\s*<br\s*\/?>\s*<\/p>\s*$/gi, '') // Aggressive trailing cleanup
+                        .replace(/<br\s*\/?>\s*$/gi, '')
+                        .replace(/\n\s*\n/g, '\n')
                         .trim()}
                     </div>
                   `

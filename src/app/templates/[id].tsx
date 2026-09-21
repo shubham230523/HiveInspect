@@ -560,14 +560,14 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   activeArea: {
-    gap: 20,
+    gap: 12,
   },
   activeHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
     marginBottom: 0,
-    paddingBottom: 12,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(128, 128, 128, 0.08)',
   },
