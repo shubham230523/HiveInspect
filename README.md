@@ -11,7 +11,7 @@ A high-fidelity migration tool for converting Spectora inspection templates into
 -   **Hierarchical Re-building**: Reconstructs `Template > Section > Item > Comment` trees while respecting the original source `Order`.
 -   **Transparency Reporting**: Post-import summary with detailed statistics and a "Preservation Check" to verify zero data loss.
 -   **Smart Template Editor**:
-    -   **Answer Type Aware**: Specialized controls for `boolean`, `date`, `number`, and `checkbox`.
+    -   **Answer Type Aware**: Specialized controls for `boolean`, `date`, `number` and `checkbox`.
     -   **Multiple Choice Editor**: Full CRUD support for item options.
     -   **HTML Preview**: Real-time rendering of rich text comments.
 -   **Atomic Persistence**: Secure saving via PostgreSQL RPC functions in Supabase.
