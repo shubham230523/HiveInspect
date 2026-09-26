@@ -11,8 +11,8 @@ A high-fidelity migration tool for converting Spectora inspection templates into
 -   **Hierarchical Re-building**: Reconstructs `Template > Section > Item > Comment` trees while respecting the original source `Order`.
 -   **Transparency Reporting**: Post-import summary with detailed statistics and a "Preservation Check" to verify zero data loss.
 -   **Smart Template Editor**:
-    -   **Answer Type Aware**: Specialized controls for `boolean`, `date`, `number` and `checkbox`.
-    -   **Multiple Choice Editor**: Full CRUD support for item options.
+    -   **Answer Type Aware**: Specialized controls for `boolean`, `checkbox`, `date`, `number`, `range`, and `text`.
+    -   **WYSIWYG Formatting**: Pro toolbar for bold, italic, underline, lists, and links.
     -   **HTML Preview**: Real-time rendering of rich text comments.
 -   **Atomic Persistence**: Secure saving via PostgreSQL RPC functions in Supabase.
 -   **Deep Duplication**: Create independent template copies with isolated UUIDs.
@@ -45,7 +45,7 @@ npm run web
 ```
 
 ## 🧪 Verification
-Run the automated test suite to verify fidelity and robustness:
+Run the automated test suite (35 Jest tests) to verify fidelity and robustness:
 ```bash
 npm test
 ```
@@ -56,3 +56,15 @@ Includes verification against:
 
 ## 📝 Technical Documentation
 See [NOTES.md](./NOTES.md) for architectural details and field coverage classification.
+
+## 📊 42-Column Field Coverage Summary
+
+| Category in UI | Count | Explanation |
+| :--- | :---: | :--- |
+| **Supported** | **5** | Columns present in header & converted to database fields. |
+| **Metadata** | **8** | Secondary settings present in header & saved in JSONB. |
+| **Unsupported** | **5** | Photo columns present in header and containing data. |
+| **Not in source** | **9** | Columns completely missing from the Excel header row. |
+| **Blank Photo Cols** | **15** | Photo columns present in header but 100% empty. |
+| **TOTAL** | **42** | **Every single column accounted for!** |
+
